@@ -1,0 +1,63 @@
+[v-cloak] { display: none; } 
+
+body, html { 
+    margin: 0; 
+    padding: 0;
+    overflow: hidden; 
+    background-color: #151521; /* Fundo principal super escuro */
+    color: #e0e6ed; /* Texto cinza clarinho */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Cores Globais do Modo Escuro */
+.bg-dark-panel { background-color: #1e1e2d !important; border: 1px solid #2b2b40 !important; }
+.bg-dark-main { background-color: #151521 !important; }
+.border-dark-subtle { border-color: #2b2b40 !important; }
+
+/* Barra Lateral */
+.sidebar {
+    width: 300px; 
+    background-color: #1e1e2d; 
+    border-right: 1px solid #2b2b40; 
+}
+
+/* Mapa */
+#map {
+    background-color: #151521; 
+    border: 1px solid #2b2b40 !important;
+    z-index: 1;
+}
+
+/* Textos e Labels */
+.text-muted, .text-secondary { color: #a0aabf !important; }
+.text-dark { color: #ffffff !important; }
+
+/* Formulários escuros */
+.form-label { color: #a0aabf; font-size: 13px; font-weight: bold; margin-bottom: 4px; }
+.form-select {
+    background-color: #2b2b40;
+    color: #e0e6ed;
+    border: 1px solid #3f3f5a;
+}
+.form-select:focus {
+    background-color: #2b2b40;
+    color: #fff;
+    border-color: #ffc107; /* O Amarelo da Licitanet no foco */
+    box-shadow: 0 0 0 0.25rem rgba(255, 193, 7, 0.25);
+}
+.form-range::-webkit-slider-thumb { background: #ffc107; }
+
+/* Legenda */
+.legend-container { overflow-y: auto; padding-right: 5px; }
+.color-box {
+    width: 16px; height: 16px; display: inline-block; margin-right: 10px;
+    border: 1px solid #555; border-radius: 4px; flex-shrink: 0;
+}
+.legend-text { font-size: 12px; color: #a0aabf; line-height: 1.2; }
+.legend-container::-webkit-scrollbar { width: 6px; }
+.legend-container::-webkit-scrollbar-thumb { background-color: #3f3f5a; border-radius: 4px; }
+
+/* Alertas e Tabelas */
+.alert-scroll { background-color: #151521; border: 1px solid #2b2b40; }
+.table-dark { --bs-table-bg: #1e1e2d; --bs-table-striped-bg: #222233; border-color: #2b2b40; }
+code { color: #ffc107; background-color: #2b2b40; padding: 2px 4px; border-radius: 4px; }

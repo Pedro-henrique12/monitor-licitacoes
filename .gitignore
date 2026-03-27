@@ -1,0 +1,13 @@
+# Cache e Ambientes Virtuais
+__pycache__/
+*.pyc
+.venv/
+.env
+
+# Pastas do Banco de Dados Local
+mysql_data/
+Projeto_MySQL/
+
+# Backups e Dados Brutos (Gigantes)
+*.sql
+dados.json
