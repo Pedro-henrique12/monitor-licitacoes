@@ -14,7 +14,7 @@ engine = create_engine(MYSQL_STR)
 
 # --- Configuração de Coleta ---
 INTERVALO_DIAS = 5
-ESTADOS = ['AC','AL','AP','AM','BA','ES','CE','GO','MA','MT','MS','MG','PA','PB','PE','PR','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'] 
+ESTADOS = ['PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'] 
 MODALIDADES = [8, 9] # 4=Concorrência, 6=Pregão, 8=Dispensa
 
 # Dicionário para traduzir o ID no nome real da modalidade
