@@ -22,3 +22,5 @@ coletor_diario.py
 coletor_historico.py
 coletor_lote.py
 diagnostico.py
+.env.example
+requirements.txt

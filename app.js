@@ -1,7 +1,7 @@
 const { createApp, markRaw, nextTick } = Vue;
 
 const CORES_SISTEMAS = {
-    "Licitanet": "#FFD700", "Bll Compras": "#FF8C00", "Compras.Gov.Br": "#FF0000",
+    "Licitanet": "#FFD700", "Bll Compras": "#003a24", "Compras.Gov.Br": "#FF0000",
     "BBMNET": "#FF1493", "Br Conectado": "#800000", "Licitações-e (BB)": "#000080",
     "Bnc - Bolsa Nacional": "#87CEEB", "Compras Br": "#00CED1",
     "Licitar Digital": "#008000", "Licita Mais": "#32CD32", "Conlicitacao": "#2E8B57",

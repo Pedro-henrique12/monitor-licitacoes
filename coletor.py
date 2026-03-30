@@ -1,3 +1,5 @@
+import os
+from dotenv import load_dotenv
 import requests
 from sqlalchemy import create_engine, text
 from datetime import datetime, timedelta
@@ -9,7 +11,11 @@ import unidecode
 # --- CONFIGURAÇÃO E CONEXÃO MYSQL ---
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-MYSQL_STR = "mysql+pymysql://root:root@localhost/licitanet_db"
+# 1. Abre o cofre (.env) para ler as variáveis de ambiente
+load_dotenv()
+
+# 2. Puxa a string de conexão de forma invisível e segura
+MYSQL_STR = os.getenv("MYSQL_STR")
 engine = create_engine(MYSQL_STR)
 
 # --- Configuração de Coleta ---
