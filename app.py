@@ -16,7 +16,7 @@ st.set_page_config(
 
 load_dotenv()
 
-# Mantemos apenas o que realmente é usado no código abaixo
+# Mantemos apenas a string de conexão segura
 MYSQL_STR = os.getenv("MYSQL_STR")
 
 # --- 3. FUNÇÕES AUXILIARES ---
@@ -40,7 +40,7 @@ def buscar_centro_geografico(geojson, cod_ibge_alvo):
                     maior_poly = max(coords, key=lambda x: len(x[0]))
                     pts = maior_poly[0]
                     return sum(p[1] for p in pts)/len(pts), sum(p[0] for p in pts)/len(pts)
-            except Exception: # <- Corrigido o amarelo aqui
+            except Exception:
                 return None, None
     return None, None
 
@@ -51,7 +51,7 @@ def carregar_geojson():
         if os.path.exists(c):
             try:
                 with open(c, "r", encoding="utf-8") as f: return json.load(f)
-            except Exception: # <- Corrigido o amarelo aqui
+            except Exception:
                 pass
     return None
 
@@ -129,7 +129,7 @@ def buscar_alertas_concorrencia():
         ORDER BY r.data_publicacao DESC
         """
         return pd.read_sql(query, engine)
-    except Exception as e:
+    except Exception:
         return pd.DataFrame()
 
 def preencher_municipios_vazios(df_filtrado, geojson, uf_selecionada):
@@ -174,7 +174,7 @@ def gerar_excel(df):
         df_ex.to_excel(writer, index=False)
     return output.getvalue()
 
-#CARREGAMENTO INICIAL 
+# CARREGAMENTO INICIAL 
 geojson = carregar_geojson()
 df_banco = carregar_dados_banco()
 
@@ -223,7 +223,7 @@ df_alertas = buscar_alertas_concorrencia()
 if not df_alertas.empty:
     st.error(f"🚨Identificamos {len(df_alertas)} Prefeitura(s) da base publicando em outros sistemas nas últimas 48h!")
     with st.expander("⚠️ Clique aqui para ver os detalhes dos alertas", expanded=True):
-        for index, row in df_alertas.iterrows():
+        for _, row in df_alertas.iterrows():
             st.warning(
                 f"📍 **{row['cidade_norm']} - {row['uf']}** | 🏛️ Órgão: **{row['nome_orgao']}**\n\n"
                 f"Utilizou o portal **{row['sistema_concorrente']}** "
