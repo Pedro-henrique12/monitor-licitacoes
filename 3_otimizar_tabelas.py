@@ -1,7 +1,20 @@
 from sqlalchemy import create_engine, text
+import os
+from dotenv import load_dotenv
 
+# Abre o cofre (.env)
+load_dotenv()
+
+# --- 1. CONFIGURAÇÕES ---
+# Agora o Python vai puxar as chaves de forma segura e invisível
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+TABELA_ORIGEM = "licitacoes" 
+
+MYSQL_STR = os.getenv("MYSQL_STR")
+TABELA_DESTINO = "licitacoes_raw"
 # Conexão com o Banco MySQL
-MYSQL_STR = "mysql+mysqlconnector://root:root@localhost:3306/licitanet_db?charset=utf8mb4"
+
 
 def otimizar_banco():
     engine = create_engine(MYSQL_STR)

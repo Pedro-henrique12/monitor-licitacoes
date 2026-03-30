@@ -11,3 +11,14 @@ Projeto_MySQL/
 # Backups e Dados Brutos (Gigantes)
 *.sql
 dados.json
+
+coletor_historico.py
+gerar_dados_mercado.py
+2_criar_views.py
+3_gerar_dados_mercado.py
+3_otimizar_tabelas.py
+coletor.py
+coletor_diario.py
+coletor_historico.py
+coletor_lote.py
+diagnostico.py

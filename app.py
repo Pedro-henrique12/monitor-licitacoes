@@ -5,6 +5,10 @@ import io
 import json
 import os
 from sqlalchemy import create_engine
+import os
+from dotenv import load_dotenv
+
+
 
 # CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(
@@ -13,8 +17,16 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 2. CONEXÃO MYSQL ---
-MYSQL_STR = "mysql+mysqlconnector://root:root@localhost:3306/licitanet_db?charset=utf8mb4"
+load_dotenv()
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+TABELA_ORIGEM = "licitacoes" 
+
+MYSQL_STR = os.getenv("MYSQL_STR")
+TABELA_DESTINO = "licitacoes_raw"
+
+
 
 # --- 3. FUNÇÕES AUXILIARES ---
 def buscar_centro_geografico(geojson, cod_ibge_alvo):

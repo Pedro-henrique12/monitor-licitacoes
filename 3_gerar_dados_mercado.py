@@ -1,8 +1,20 @@
 import pandas as pd
 from sqlalchemy import create_engine
 import json
+import os
+from dotenv import load_dotenv
 
-MYSQL_STR = "mysql+pymysql://root:root@localhost/licitanet_db"
+# Abre o cofre (.env)
+load_dotenv()
+
+# --- 1. CONFIGURAÇÕES ---
+# Agora o Python vai puxar as chaves de forma segura e invisível
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+TABELA_ORIGEM = "licitacoes" 
+
+MYSQL_STR = os.getenv("MYSQL_STR")
+TABELA_DESTINO = "licitacoes_raw"
 
 def gerar_dados_mercado():
     print("Conectando ao banco para gerar dados do dashboard...")
