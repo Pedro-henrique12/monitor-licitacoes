@@ -1,17 +1,23 @@
 const { createApp, markRaw, nextTick } = Vue;
 
-// 🎨 DICIONÁRIO DE CORES ATUALIZADO COM A SUA PALETA
 const CORES_SISTEMAS = {
-    "Licitanet": "#FFD700", "Bll Compras": "#FF8C00", "Compras.Gov.Br": "#FF0000",
-    "BBMNET": "#FF1493", "Br Conectado": "#800000", "Licitações-e (BB)": "#000080",
-    "Bnc - Bolsa Nacional": "#87CEEB", "Compras Br": "#00CED1",
-    "Licitar Digital": "#008000", "Licita Mais": "#32CD32", "Conlicitacao": "#2E8B57",
-    "Portal de Compras Públicas": "#8A2BE2", "Start Gov": "#8B4513",
+    "Licitanet": "#FFD700", 
+    "Bll Compras": "#003a24", 
+    "Compras.Gov.Br": "#396dc0",
+    "BBMNET": "#002a67", 
+    "Br Conectado": "#64a9e6", 
+    "Licitações-e (BB)": "#2adace",
+    "Bnc - Bolsa Nacional": "#2a3ef7", 
+    "Compras Br": "#cfe6b2",
+    "Licitar Digital": "#03c7d7", 
+    "Licita Mais": "#21b14f", 
+    "Conlicitacao": "#334152",
+    "Portal de Compras Públicas": "#f7a622", 
+    "Start Gov": "#f8cd37",
     "Sem Dados no PNCP": "#444444", 
-    "Outros": "#A9A9A9"    // Padrão para plataformas não mapeadas 
+    "Outros": "#A9A9A9"    
 };
 
-// Define globalmente a cor do texto dos gráficos para Modo Escuro
 Chart.defaults.color = '#a0aabf';
 
 createApp({
@@ -58,7 +64,6 @@ createApp({
         iniciarMapa() {
             if (document.getElementById('map') && !this.mapa) {
                 this.mapa = markRaw(L.map('map', { preferCanvas: true }).setView([-15.7801, -47.9292], 4));
-                // MAPA BASE DARK MATTER
                 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', { opacity: 0.9 }).addTo(this.mapa);
             }
         },
@@ -76,7 +81,7 @@ createApp({
                 
                 if (resAlertas.ok) {
                     this.alertas = await resAlertas.json();
-                    this.alertasFiltrados = this.alertas; // 🎯 INICIA OS ALERTAS FILTRADOS AQUI
+                    this.alertasFiltrados = this.alertas; 
                 }
                 if (resDados.ok) this.dadosMercado = await resDados.json();
                 if (resGeo.ok) this.geoJsonDados = markRaw(await resGeo.json());
@@ -93,7 +98,6 @@ createApp({
         },
 
         filtrarDados() {
-            // 1. Filtra os polígonos e os dashboards
             if (this.ufSelecionada === 'Todos') {
                 this.dadosFiltrados = [...this.dadosMercado];
                 this.listaCidades = [];
@@ -106,7 +110,6 @@ createApp({
                 if (this.cidadeSelecionada !== 'Todos') this.dadosFiltrados = this.dadosFiltrados.filter(item => item.cidade_norm === this.cidadeSelecionada);
             }
 
-            // 🎯 2. FILTRA OS ALERTAS DO TOPO DA TELA
             this.alertasFiltrados = this.alertas.filter(alerta => {
                 let bateUf = (this.ufSelecionada === 'Todos') || (alerta.uf === this.ufSelecionada);
                 let bateCidade = (this.cidadeSelecionada === 'Todos') || (alerta.cidade_norm === this.cidadeSelecionada);
@@ -148,7 +151,6 @@ createApp({
                 let cor = CORES_SISTEMAS["Sem Dados no PNCP"];
                 if (dadosCidade && CORES_SISTEMAS[dadosCidade.sistema_fonte]) cor = CORES_SISTEMAS[dadosCidade.sistema_fonte];
                 
-                // Bordas ligeiramente mais escuras para o dark mode
                 return { fillColor: cor, weight: 0.5, color: '#111', opacity: 0.8, fillOpacity: 0.9 };
             };
 
@@ -186,7 +188,6 @@ createApp({
             const ctx1 = document.getElementById('chartPlataformas').getContext('2d');
             this.graficoPlat = markRaw(new Chart(ctx1, {
                 type: 'doughnut', 
-                // BorderColor combinando com o fundo do painel escuro
                 data: { labels: labelsPlat, datasets: [{ data: dataPlat, backgroundColor: coresPlat, borderWidth: 2, borderColor: '#1e1e2d' }] },
                 options: { maintainAspectRatio: false, cutout: '60%', plugins: { legend: { position: 'right', labels: { boxWidth: 12 } } } }
             }));
@@ -230,6 +231,29 @@ createApp({
             let nomeFiltro = this.ufSelecionada !== 'Todos' ? `_${this.ufSelecionada}` : '_Brasil';
             if (this.cidadeSelecionada !== 'Todos') nomeFiltro += `_${this.cidadeSelecionada}`;
             XLSX.writeFile(wb, `Relatorio_Mercado${nomeFiltro}.xlsx`);
+        },
+
+        // --- NOVA FUNÇÃO PARA GERAR O LINK DO PNCP ---
+        gerarLinkPNCP(id_pncp) {
+            if (!id_pncp) return '#';
+            try {
+                // Separa no hifen e barra. O formato é: CNPJ-X-NUMERO/ANO
+                // Ex: "05575916000193-1-000003/2026"
+                const partesBarra = id_pncp.split('/');
+                if (partesBarra.length !== 2) return '#';
+                const ano = partesBarra[1]; // "2026"
+
+                const partesHifen = partesBarra[0].split('-');
+                if (partesHifen.length < 3) return '#';
+                const cnpj = partesHifen[0]; // "05575916000193"
+                const numeroStr = partesHifen[partesHifen.length - 1]; // "000003"
+                const numero = parseInt(numeroStr, 10); // Transformou em 3
+
+                return `https://pncp.gov.br/app/editais/${cnpj}/${ano}/${numero}`;
+            } catch (e) {
+                console.error("Erro ao gerar link PNCP:", e);
+                return '#';
+            }
         }
     }
 }).mount('#app');

@@ -5,10 +5,7 @@ import io
 import json
 import os
 from sqlalchemy import create_engine
-import os
 from dotenv import load_dotenv
-
-
 
 # CONFIGURAÇÃO DA PÁGINA
 st.set_page_config(
@@ -19,14 +16,8 @@ st.set_page_config(
 
 load_dotenv()
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-TABELA_ORIGEM = "licitacoes" 
-
+# Mantemos apenas o que realmente é usado no código abaixo
 MYSQL_STR = os.getenv("MYSQL_STR")
-TABELA_DESTINO = "licitacoes_raw"
-
-
 
 # --- 3. FUNÇÕES AUXILIARES ---
 def buscar_centro_geografico(geojson, cod_ibge_alvo):
@@ -49,7 +40,8 @@ def buscar_centro_geografico(geojson, cod_ibge_alvo):
                     maior_poly = max(coords, key=lambda x: len(x[0]))
                     pts = maior_poly[0]
                     return sum(p[1] for p in pts)/len(pts), sum(p[0] for p in pts)/len(pts)
-            except: return None, None
+            except Exception: # <- Corrigido o amarelo aqui
+                return None, None
     return None, None
 
 @st.cache_data
@@ -59,7 +51,8 @@ def carregar_geojson():
         if os.path.exists(c):
             try:
                 with open(c, "r", encoding="utf-8") as f: return json.load(f)
-            except: pass
+            except Exception: # <- Corrigido o amarelo aqui
+                pass
     return None
 
 @st.cache_data(ttl=60)

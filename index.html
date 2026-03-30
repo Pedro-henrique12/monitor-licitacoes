@@ -33,7 +33,7 @@
         <nav class="navbar navbar-expand-lg shadow-sm z-3 border-bottom border-dark-subtle" style="background-color: #11111a;">
             <div class="container-fluid">
                 <a class="navbar-brand" href="#">
-                    <img src="logo_licitanet.png" alt="Logo Licitanet" height="45" class="d-inline-block align-text-top">
+                    <img src="logo_licitanet.jpeg" alt="Logo Licitanet" height="45" class="d-inline-block align-text-top">
                 </a>
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav ms-auto">
@@ -114,10 +114,18 @@
                             </div>
                             <div id="collapseAlertas" class="collapse show" v-if="alertasFiltrados.length > 0">
                                 <div class="card-body bg-dark-main p-2 alert-scroll" style="max-height: 120px; overflow-y: auto;">
-                                    <div v-for="alerta in alertasFiltrados" :key="alerta.id_pncp" class="bg-dark-panel border-start border-danger border-4 p-2 mb-2 rounded shadow-sm text-light" style="font-size: 13px;">
-                                        <span class="fw-bold text-warning">📍 {{ alerta.cidade_norm }} - {{ alerta.uf }}</span> | {{ alerta.nome_orgao }}<br>
-                                        Portal: <b class="text-danger">{{ alerta.sistema_concorrente }}</b> | Data: <code>{{ alerta.data_publicacao.substring(0,10) }}</code>
+                                    
+                                    <div v-for="alerta in alertasFiltrados" :key="alerta.id_pncp" class="bg-dark-panel border-start border-danger border-4 p-2 mb-2 rounded shadow-sm text-light d-flex justify-content-between align-items-center" style="font-size: 13px;">
+                                        <div>
+                                            <span class="fw-bold text-warning">📍 {{ alerta.cidade_norm }} - {{ alerta.uf }}</span> | {{ alerta.nome_orgao }}<br>
+                                            Portal: <b class="text-danger">{{ alerta.sistema_concorrente }}</b> | Data: <code>{{ alerta.data_publicacao.substring(0,10) }}</code>
+                                        </div>
+                                        
+                                        <a :href="gerarLinkPNCP(alerta.id_pncp)" target="_blank" class="btn btn-sm btn-outline-light ms-2" style="font-size: 11px; white-space: nowrap;" v-if="alerta.id_pncp">
+                                            🔗 Ver Edital
+                                        </a>
                                     </div>
+
                                 </div>
                             </div>
                         </div>
