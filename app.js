@@ -1,21 +1,13 @@
 const { createApp, markRaw, nextTick } = Vue;
 
 const CORES_SISTEMAS = {
-    "Licitanet": "#FFD700", 
-    "Bll Compras": "#003a24", 
-    "Compras.Gov.Br": "#396dc0",
-    "BBMNET": "#002a67", 
-    "Br Conectado": "#64a9e6", 
-    "Licitações-e (BB)": "#2adace",
-    "Bnc - Bolsa Nacional": "#2a3ef7", 
-    "Compras Br": "#cfe6b2",
-    "Licitar Digital": "#03c7d7", 
-    "Licita Mais": "#21b14f", 
-    "Conlicitacao": "#334152",
-    "Portal de Compras Públicas": "#f7a622", 
-    "Start Gov": "#f8cd37",
-    "Sem Dados no PNCP": "#444444", 
-    "Outros": "#A9A9A9"    
+    "Licitanet": "#FFD700", "Bll Compras": "#FF8C00", "Compras.Gov.Br": "#FF0000",
+    "BBMNET": "#FF1493", "Br Conectado": "#800000", "Licitações-e (BB)": "#000080",
+    "Bnc - Bolsa Nacional": "#87CEEB", "Compras Br": "#00CED1",
+    "Licitar Digital": "#008000", "Licita Mais": "#32CD32", "Conlicitacao": "#2E8B57",
+    "Portal de Compras Públicas": "#8A2BE2", "Start Gov": "#8B4513",
+    "Sem Dados no PNCP": "#444444", // Escureci o Sem Dados para combinar
+    "Outros": "#A9A9A9"    // Padrão para plataformas não mapeadas   
 };
 
 Chart.defaults.color = '#a0aabf';
