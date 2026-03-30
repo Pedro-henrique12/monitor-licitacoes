@@ -1,7 +1,6 @@
 const { createApp, markRaw, nextTick } = Vue;
 
 const CORES_SISTEMAS = {
-    coresSistemas: {
         "Bll Compras": "#003a24",
         "Compras.Gov.Br": "#396dc0",
         "BBMNET": "#002a67",
@@ -16,7 +15,6 @@ const CORES_SISTEMAS = {
         "Start Gov": "#f8cd37",
         "Licitanet": "#ffcc00", // Cor do Licitanet (mantida caso você use no mapa)
         "Outros": "#ffffff"     // Padrão para plataformas não mapeadas
-    },
 };
 
 // Define globalmente a cor do texto dos gráficos para Modo Escuro
