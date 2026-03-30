@@ -105,16 +105,16 @@
                     <div class="m-3 mb-0">
                         <div class="card bg-dark-panel border-0 shadow-sm">
                             <div class="card-header bg-dark-panel border-bottom-0 d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#collapseAlertas" style="cursor: pointer;">
-                                <h6 class="mb-0 text-danger fw-bold" v-if="alertas.length > 0">
-                                    🚨 Identificamos {{ alertas.length }} prefeituras publicando fora!
+                                <h6 class="mb-0 text-danger fw-bold" v-if="alertasFiltrados.length > 0">
+                                    🚨 Identificamos {{ alertasFiltrados.length }} prefeituras publicando fora!
                                 </h6>
                                 <h6 class="mb-0 text-success fw-bold" v-else>
                                     ✅ Sem alertas recentes de concorrência.
                                 </h6>
                             </div>
-                            <div id="collapseAlertas" class="collapse show" v-if="alertas.length > 0">
+                            <div id="collapseAlertas" class="collapse show" v-if="alertasFiltrados.length > 0">
                                 <div class="card-body bg-dark-main p-2 alert-scroll" style="max-height: 120px; overflow-y: auto;">
-                                    <div v-for="alerta in alertas" :key="alerta.id_pncp" class="bg-dark-panel border-start border-danger border-4 p-2 mb-2 rounded shadow-sm text-light" style="font-size: 13px;">
+                                    <div v-for="alerta in alertasFiltrados" :key="alerta.id_pncp" class="bg-dark-panel border-start border-danger border-4 p-2 mb-2 rounded shadow-sm text-light" style="font-size: 13px;">
                                         <span class="fw-bold text-warning">📍 {{ alerta.cidade_norm }} - {{ alerta.uf }}</span> | {{ alerta.nome_orgao }}<br>
                                         Portal: <b class="text-danger">{{ alerta.sistema_concorrente }}</b> | Data: <code>{{ alerta.data_publicacao.substring(0,10) }}</code>
                                     </div>

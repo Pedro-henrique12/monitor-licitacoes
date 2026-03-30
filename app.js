@@ -1,20 +1,14 @@
 const { createApp, markRaw, nextTick } = Vue;
 
+// 🎨 DICIONÁRIO DE CORES ATUALIZADO COM A SUA PALETA
 const CORES_SISTEMAS = {
-        "Bll Compras": "#003a24",
-        "Compras.Gov.Br": "#396dc0",
-        "BBMNET": "#002a67",
-        "Br Conectado": "#64a9e6",
-        "Licitações-e (BB)": "#2adace",
-        "Bnc - Bolsa Nacional": "#2a3ef7",
-        "Compras Br": "#cfe6b2",
-        "Licitar Digital": "#03c7d7",
-        "Licita Mais": "#21b14f",
-        "Conlicitacao": "#334152",
-        "Portal de Compras Públicas": "#f7a622",
-        "Start Gov": "#f8cd37",
-        "Licitanet": "#ffcc00", // Cor do Licitanet (mantida caso você use no mapa)
-        "Outros": "#ffffff"     // Padrão para plataformas não mapeadas
+    "Licitanet": "#FFD700", "Bll Compras": "#FF8C00", "Compras.Gov.Br": "#FF0000",
+    "BBMNET": "#FF1493", "Br Conectado": "#800000", "Licitações-e (BB)": "#000080",
+    "Pncp": "#4169E1", "Bnc - Bolsa Nacional": "#87CEEB", "Compras Br": "#00CED1",
+    "Licitar Digital": "#008000", "Licita Mais": "#32CD32", "Conlicitacao": "#2E8B57",
+    "Portal de Compras Públicas": "#8A2BE2", "Start Gov": "#8B4513",
+    "Sem Dados no PNCP": "#444444", 
+    "Outros": "#A9A9A9"    // Padrão para plataformas não mapeadas 
 };
 
 // Define globalmente a cor do texto dos gráficos para Modo Escuro
@@ -24,7 +18,7 @@ createApp({
     data() {
         return {
             abaAtiva: 'mapa', 
-            dadosMercado: [], dadosFiltrados: [], alertas: [], geoJsonDados: null,
+            dadosMercado: [], dadosFiltrados: [], alertas: [], alertasFiltrados: [], geoJsonDados: null,
             mapa: null, camadaGeoJson: null, graficoPlat: null, graficoConc: null,
             ufSelecionada: 'Todos', cidadeSelecionada: 'Todos', listaUFs: [], listaCidades: [], coresSistemas: CORES_SISTEMAS,
             dadosRadar: [], dadosRadarFiltrados: [], radarTipoOrgao: 'Todos', radarMeses: 2
@@ -80,7 +74,10 @@ createApp({
                     fetch('alertas.json'), fetch('dados_mercado.json'), fetch('municipios_ibge.json/geojs-100-mun.json')
                 ]);
                 
-                if (resAlertas.ok) this.alertas = await resAlertas.json();
+                if (resAlertas.ok) {
+                    this.alertas = await resAlertas.json();
+                    this.alertasFiltrados = this.alertas; // 🎯 INICIA OS ALERTAS FILTRADOS AQUI
+                }
                 if (resDados.ok) this.dadosMercado = await resDados.json();
                 if (resGeo.ok) this.geoJsonDados = markRaw(await resGeo.json());
 
@@ -96,6 +93,7 @@ createApp({
         },
 
         filtrarDados() {
+            // 1. Filtra os polígonos e os dashboards
             if (this.ufSelecionada === 'Todos') {
                 this.dadosFiltrados = [...this.dadosMercado];
                 this.listaCidades = [];
@@ -107,6 +105,14 @@ createApp({
                 this.listaCidades = cidades.sort();
                 if (this.cidadeSelecionada !== 'Todos') this.dadosFiltrados = this.dadosFiltrados.filter(item => item.cidade_norm === this.cidadeSelecionada);
             }
+
+            // 🎯 2. FILTRA OS ALERTAS DO TOPO DA TELA
+            this.alertasFiltrados = this.alertas.filter(alerta => {
+                let bateUf = (this.ufSelecionada === 'Todos') || (alerta.uf === this.ufSelecionada);
+                let bateCidade = (this.cidadeSelecionada === 'Todos') || (alerta.cidade_norm === this.cidadeSelecionada);
+                return bateUf && bateCidade;
+            });
+
             if (this.abaAtiva === 'mapa') this.renderizarPoligonos();
             if (this.abaAtiva === 'dashboards') this.atualizarDashboards();
             this.filtrarRadar(); 
