@@ -1,5 +1,3 @@
-import os
-from dotenv import load_dotenv
 import requests
 from sqlalchemy import create_engine, text
 from datetime import datetime, timedelta
@@ -11,17 +9,13 @@ import unidecode
 # --- CONFIGURAÇÃO E CONEXÃO MYSQL ---
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# 1. Abre o cofre (.env) para ler as variáveis de ambiente
-load_dotenv()
-
-# 2. Puxa a string de conexão de forma invisível e segura
-MYSQL_STR = os.getenv("MYSQL_STR")
+MYSQL_STR = "mysql+pymysql://root:root@localhost/licitanet_db"
 engine = create_engine(MYSQL_STR)
 
 # --- Configuração de Coleta ---
-INTERVALO_DIAS = 5
-ESTADOS = ['PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'] 
-MODALIDADES = [8, 9] # 4=Concorrência, 6=Pregão, 8=Dispensa
+INTERVALO_DIAS = 6
+ESTADOS = ['AC','AL','AP','AM','BA','ES','CE','GO','MA','MT','MS','MG','PA','PB','PE','PR','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'] 
+MODALIDADES = [6, 7, 8, 9, 4, 5] # 4=Concorrência, 6=Pregão, 8=Dispensa
 
 # Dicionário para traduzir o ID no nome real da modalidade
 MAPA_MODALIDADES = {
@@ -185,4 +179,4 @@ def coletar_por_lotes(data_inicio_str, data_fim_str):
             time.sleep(0.5)
 
 if __name__ == "__main__":
-    coletar_por_lotes("20250101", "20260323")
+    coletar_por_lotes("20260324", "20260328")
