@@ -58,25 +58,31 @@ def gerar_dados_mercado():
     # --- 3. RADAR COMERCIAL (ÓRGÃOS INATIVOS) ---
     print("Calculando Radar de Vendas (Inativos)...")
     
-    # NOVA QUERY: Isola a data máxima e puxa a plataforma correspondente a essa data
+    # SOLUÇÃO POR CNPJ: Separa prefeituras e fundos naturalmente, trazendo a última data real.
     query_radar = """
     SELECT 
         r.uf AS Estado,
         r.cidade_norm AS Municipio,
-        r.nome_orgao AS Orgao,
-        r.data_publicacao AS Ultima_Publicacao,
-        TIMESTAMPDIFF(MONTH, r.data_publicacao, CURDATE()) AS Meses_Inativo,
-        r.sistema_fonte AS Plataforma
+        
+        -- Truque mágico: Junta a data e o nome, pega o mais recente e recorta só o nome de volta.
+        SUBSTRING_INDEX(MAX(CONCAT(r.data_publicacao, '||', r.nome_orgao)), '||', -1) AS Orgao,
+        
+        MAX(r.data_publicacao) AS Ultima_Publicacao,
+        TIMESTAMPDIFF(MONTH, MAX(r.data_publicacao), CURDATE()) AS Meses_Inativo,
+        
+        -- Faz o mesmo truque para descobrir a última plataforma usada
+        SUBSTRING_INDEX(MAX(CONCAT(r.data_publicacao, '||', r.sistema_fonte)), '||', -1) AS Plataforma,
+        
+        -- Extraímos o CNPJ puro e mandamos para o JSON (bom para a equipe comercial consultar)
+        SUBSTRING_INDEX(r.id_pncp, '-', 1) AS CNPJ
+        
     FROM licitacoes_raw r
-    INNER JOIN (
-        SELECT cod_ibge, nome_orgao, MAX(data_publicacao) as max_data
-        FROM licitacoes_raw
-        GROUP BY cod_ibge, nome_orgao
-    ) ultimos ON r.cod_ibge = ultimos.cod_ibge 
-             AND r.nome_orgao = ultimos.nome_orgao 
-             AND r.data_publicacao = ultimos.max_data
-    WHERE TIMESTAMPDIFF(MONTH, r.data_publicacao, CURDATE()) >= 2
-    GROUP BY r.cod_ibge, r.nome_orgao, r.uf, r.cidade_norm, r.data_publicacao, r.sistema_fonte
+    WHERE r.id_pncp IS NOT NULL AND r.id_pncp LIKE '%%-%%'
+    GROUP BY 
+        r.uf, 
+        r.cidade_norm, 
+        SUBSTRING_INDEX(r.id_pncp, '-', 1) -- O SEGREDO: Agrupa estritamente pelo CNPJ!
+    HAVING Meses_Inativo >= 2
     ORDER BY Meses_Inativo DESC, r.uf ASC, r.cidade_norm ASC
     """
     try:
@@ -85,7 +91,7 @@ def gerar_dados_mercado():
             df_radar['Ultima_Publicacao'] = pd.to_datetime(df_radar['Ultima_Publicacao']).dt.strftime('%d/%m/%Y')
         with open('radar.json', 'w', encoding='utf-8') as f:
             json.dump(df_radar.to_dict(orient='records'), f, ensure_ascii=False)
-        print(f"✅ radar.json gerado com {len(df_radar)} órgãos inativos.")
+        print(f"✅ radar.json gerado com {len(df_radar)} órgãos inativos únicos (por CNPJ).")
     except Exception as e: print(f"Erro no radar: {e}")
 
 if __name__ == "__main__":
