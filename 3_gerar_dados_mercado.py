@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 # Abre o cofre (.env)
 load_dotenv()
 
-# --- 1. CONFIGURAÇÕES ---
+# Puxa a string de conexão segura do MySQL
 MYSQL_STR = os.getenv("MYSQL_STR")
 
 def gerar_dados_mercado():
@@ -29,6 +29,7 @@ def gerar_dados_mercado():
         print(f"✅ dados_mercado.json gerado.")
 
     # --- 2. ALERTAS DE CONCORRÊNCIA ---
+    # (Mantido conforme as regras de interesse para prefeituras)
     print("Buscando alertas de concorrência...")
     query_alertas = """
     SELECT DISTINCT r.cidade_norm, r.uf, r.sistema_fonte AS sistema_concorrente, r.id_pncp, r.data_publicacao, r.nome_orgao
@@ -55,33 +56,32 @@ def gerar_dados_mercado():
         print(f"✅ alertas.json gerado.")
     except Exception as e: print(f"Erro nos alertas: {e}")
 
-    # --- 3. RADAR COMERCIAL (ÓRGÃOS INATIVOS) ---
-    print("Calculando Radar de Vendas (Inativos)...")
+    # --- 3. RADAR COMERCIAL (ÓRGÃOS INDIVIDUALIZADOS POR CNPJ) ---
+    print("Calculando Radar de Vendas (Inativos por CNPJ)...")
     
-    # SOLUÇÃO POR CNPJ: Separa prefeituras e fundos naturalmente, trazendo a última data real.
+    # A MUDANÇA: Agrupamos pelo CNPJ COMPLETO (14 dígitos).
+    # Isso separa Fundo de Saúde (CNPJ A) de Prefeitura (CNPJ B).
     query_radar = """
     SELECT 
         r.uf AS Estado,
         r.cidade_norm AS Municipio,
         
-        -- Truque mágico: Junta a data e o nome, pega o mais recente e recorta só o nome de volta.
+        -- Pega o nome mais recente usado por ESTE CNPJ específico
         SUBSTRING_INDEX(MAX(CONCAT(r.data_publicacao, '||', r.nome_orgao)), '||', -1) AS Orgao,
         
         MAX(r.data_publicacao) AS Ultima_Publicacao,
         TIMESTAMPDIFF(MONTH, MAX(r.data_publicacao), CURDATE()) AS Meses_Inativo,
         
-        -- Faz o mesmo truque para descobrir a última plataforma usada
+        -- Pega a última plataforma usada por ESTE CNPJ específico
         SUBSTRING_INDEX(MAX(CONCAT(r.data_publicacao, '||', r.sistema_fonte)), '||', -1) AS Plataforma,
         
-        -- Extraímos o CNPJ puro e mandamos para o JSON (bom para a equipe comercial consultar)
+        -- Traz o CNPJ Completo para o seu vendedor saber exatamente quem é
         SUBSTRING_INDEX(r.id_pncp, '-', 1) AS CNPJ
         
     FROM licitacoes_raw r
     WHERE r.id_pncp IS NOT NULL AND r.id_pncp LIKE '%%-%%'
     GROUP BY 
-        r.uf, 
-        r.cidade_norm, 
-        SUBSTRING_INDEX(r.id_pncp, '-', 1) -- O SEGREDO: Agrupa estritamente pelo CNPJ!
+        SUBSTRING_INDEX(r.id_pncp, '-', 1) -- AGRUPAMENTO POR CNPJ ÚNICO
     HAVING Meses_Inativo >= 2
     ORDER BY Meses_Inativo DESC, r.uf ASC, r.cidade_norm ASC
     """
@@ -91,7 +91,7 @@ def gerar_dados_mercado():
             df_radar['Ultima_Publicacao'] = pd.to_datetime(df_radar['Ultima_Publicacao']).dt.strftime('%d/%m/%Y')
         with open('radar.json', 'w', encoding='utf-8') as f:
             json.dump(df_radar.to_dict(orient='records'), f, ensure_ascii=False)
-        print(f"✅ radar.json gerado com {len(df_radar)} órgãos inativos únicos (por CNPJ).")
+        print(f"✅ radar.json gerado com {len(df_radar)} registros individuais.")
     except Exception as e: print(f"Erro no radar: {e}")
 
 if __name__ == "__main__":
