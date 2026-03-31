@@ -8,7 +8,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- 1. CONFIGURAÇÕES ---
-# Puxa a string de conexão segura do MySQL
 MYSQL_STR = os.getenv("MYSQL_STR")
 
 def gerar_dados_mercado():
@@ -59,19 +58,26 @@ def gerar_dados_mercado():
     # --- 3. RADAR COMERCIAL (ÓRGÃOS INATIVOS) ---
     print("Calculando Radar de Vendas (Inativos)...")
     
-    # AQUI ESTÁ A CORREÇÃO: Agrupando por IBGE e garantindo que Licitanet não publicou nos últimos 6 meses
+    # NOVA QUERY: Isola a data máxima e puxa a plataforma correspondente a essa data
     query_radar = """
     SELECT 
-        uf AS Estado,
-        cidade_norm AS Municipio,
-        nome_orgao AS Orgao,
-        MAX(data_publicacao) AS Ultima_Publicacao,
-        TIMESTAMPDIFF(MONTH, MAX(data_publicacao), CURDATE()) AS Meses_Inativo
-    FROM licitacoes_raw
-    GROUP BY cod_ibge, uf, cidade_norm, nome_orgao
-    HAVING Meses_Inativo >= 2
-       AND MAX(CASE WHEN sistema_fonte = 'Licitanet' AND data_publicacao >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH) THEN 1 ELSE 0 END) = 0
-    ORDER BY Meses_Inativo DESC, uf ASC, cidade_norm ASC
+        r.uf AS Estado,
+        r.cidade_norm AS Municipio,
+        r.nome_orgao AS Orgao,
+        r.data_publicacao AS Ultima_Publicacao,
+        TIMESTAMPDIFF(MONTH, r.data_publicacao, CURDATE()) AS Meses_Inativo,
+        r.sistema_fonte AS Plataforma
+    FROM licitacoes_raw r
+    INNER JOIN (
+        SELECT cod_ibge, nome_orgao, MAX(data_publicacao) as max_data
+        FROM licitacoes_raw
+        GROUP BY cod_ibge, nome_orgao
+    ) ultimos ON r.cod_ibge = ultimos.cod_ibge 
+             AND r.nome_orgao = ultimos.nome_orgao 
+             AND r.data_publicacao = ultimos.max_data
+    WHERE TIMESTAMPDIFF(MONTH, r.data_publicacao, CURDATE()) >= 2
+    GROUP BY r.cod_ibge, r.nome_orgao, r.uf, r.cidade_norm, r.data_publicacao, r.sistema_fonte
+    ORDER BY Meses_Inativo DESC, r.uf ASC, r.cidade_norm ASC
     """
     try:
         df_radar = pd.read_sql(query_radar, engine)

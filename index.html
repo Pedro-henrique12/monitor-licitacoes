@@ -48,7 +48,7 @@
         <nav class="navbar navbar-expand-lg shadow-sm z-2 border-bottom border-dark-subtle" style="background-color: #11111a;">
             <div class="container-fluid">
                 <a class="navbar-brand" href="#">
-                    <img src="logo_licitanet.jpeg" alt="Logo Licitanet" height="45" class="d-inline-block align-text-top">
+                    <img src="logo.png" alt="Logo Licitanet" height="45" class="d-inline-block align-text-top">
                 </a>
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav ms-auto">
@@ -88,6 +88,12 @@
                         <option value="Câmaras">Câmaras</option>
                         <option value="Fundos/Secretarias">Fundos/Secretarias</option>
                         <option value="Outros">Outros</option>
+                    </select>
+
+                    <label class="form-label mt-1" style="font-size: 11px;">Última Plataforma:</label>
+                    <select class="form-select form-select-sm mb-2" v-model="radarPlataforma" @change="filtrarRadar">
+                        <option value="Todas">Todas</option>
+                        <option v-for="plat in listaPlataformasRadar" :key="plat" :value="plat">{{ plat }}</option>
                     </select>
                     
                     <label class="form-label" style="font-size: 11px;">Meses inativo: <span class="text-warning fw-bold">{{ radarMeses }}</span> ou mais</label>
@@ -200,6 +206,7 @@
                                     <th>Estado</th>
                                     <th>Município</th>
                                     <th>Órgão</th>
+                                    <th>Última Plataforma</th>
                                     <th>Última Publicação</th>
                                     <th style="min-width: 150px;">Inatividade</th>
                                 </tr>
@@ -209,6 +216,7 @@
                                     <td><span class="badge bg-secondary">{{ item.Estado }}</span></td>
                                     <td class="fw-bold text-light">{{ item.Municipio }}</td>
                                     <td class="small text-muted">{{ item.Orgao }}</td>
+                                    <td><span class="badge bg-dark border border-secondary text-light">{{ item.Plataforma }}</span></td>
                                     <td class="text-light">{{ item.Ultima_Publicacao }}</td>
                                     <td>
                                         <div class="d-flex align-items-center">
@@ -220,7 +228,7 @@
                                     </td>
                                 </tr>
                                 <tr v-if="dadosRadarFiltrados.length === 0">
-                                    <td colspan="5" class="text-center py-4 text-muted">Nenhum alvo encontrado para os filtros atuais.</td>
+                                    <td colspan="6" class="text-center py-4 text-muted">Nenhum alvo encontrado para os filtros atuais.</td>
                                 </tr>
                             </tbody>
                         </table>

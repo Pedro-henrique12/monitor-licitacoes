@@ -19,11 +19,8 @@ createApp({
             dadosMercado: [], dadosFiltrados: [], alertas: [], alertasFiltrados: [], geoJsonDados: null,
             mapa: null, camadaGeoJson: null, graficoPlat: null, graficoConc: null,
             ufSelecionada: 'Todos', cidadeSelecionada: 'Todos', listaUFs: [], listaCidades: [], coresSistemas: CORES_SISTEMAS,
-            dadosRadar: [], dadosRadarFiltrados: [], radarTipoOrgao: 'Todos', radarMeses: 2,
-            // NOVAS VARIÁVEIS
-            alertasExpandidos: false,
-            paginaAtualRadar: 1,
-            itensPorPagina: 50
+            dadosRadar: [], dadosRadarFiltrados: [], radarTipoOrgao: 'Todos', radarMeses: 2, radarPlataforma: 'Todas', listaPlataformasRadar: [],
+            alertasExpandidos: false, paginaAtualRadar: 1, itensPorPagina: 50
         }
     },
     computed: {
@@ -43,7 +40,6 @@ createApp({
             const exclusivos = this.dadosFiltrados.filter(d => d.status_municipio === 'Exclusivo').length;
             return ((exclusivos / total) * 100).toFixed(1);
         },
-        // NOVAS COMPUTEDS PARA PAGINAÇÃO
         radarPaginado() {
             const inicio = (this.paginaAtualRadar - 1) * this.itensPorPagina;
             const fim = inicio + this.itensPorPagina;
@@ -77,7 +73,11 @@ createApp({
             try {
                 try {
                     const resRadar = await fetch('radar.json');
-                    if (resRadar.ok) this.dadosRadar = await resRadar.json();
+                    if (resRadar.ok) {
+                        this.dadosRadar = await resRadar.json();
+                        const plats = [...new Set(this.dadosRadar.map(item => item.Plataforma).filter(Boolean))];
+                        this.listaPlataformasRadar = plats.sort();
+                    }
                 } catch (e) { console.log("Radar pendente."); }
 
                 const [resAlertas, resDados, resGeo] = await Promise.all([
@@ -128,7 +128,10 @@ createApp({
 
         filtrarRadar() {
             let filtrados = this.dadosRadar || [];
+            
             if (this.ufSelecionada !== 'Todos') filtrados = filtrados.filter(d => d.Estado === this.ufSelecionada);
+            if (this.radarPlataforma !== 'Todas') filtrados = filtrados.filter(d => d.Plataforma === this.radarPlataforma);
+            
             filtrados = filtrados.filter(d => d.Meses_Inativo >= this.radarMeses);
 
             if (this.radarTipoOrgao === "Prefeitura/Município") {
@@ -140,8 +143,9 @@ createApp({
             } else if (this.radarTipoOrgao === "Outros") {
                 filtrados = filtrados.filter(d => !/PREFEITURA|MUNICÍPIO|MUNICIPIO/i.test(d.Orgao) && !/CÂMARA|CAMARA/i.test(d.Orgao) && !/FUNDO|SECRETARIA|SAÚDE|SAUDE|ASSISTÊNCIA|ASSISTENCIA|EDUCAÇÃO|EDUCACAO/i.test(d.Orgao));
             }
+            
             this.dadosRadarFiltrados = filtrados;
-            this.paginaAtualRadar = 1; // Reseta a página sempre que filtra
+            this.paginaAtualRadar = 1; 
         },
 
         renderizarPoligonos() {
@@ -257,7 +261,6 @@ createApp({
             }
         },
 
-        // NOVOS MÉTODOS DE CONTROLE DA UI
         abrirModalAlertas() { this.alertasExpandidos = true; },
         fecharModalAlertas() { this.alertasExpandidos = false; },
         mudarPagina(p) {
