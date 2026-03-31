@@ -5,17 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Monitor de Licitações</title>
     <script>
-        // Configura sua senha aqui
         const SENHA_CORRETA = "TESTE#2026"; 
-    
-        // Pede a senha assim que a página começa a carregar
         let tentativa = prompt("Acesso Restrito. Digite a senha do Radar:");
-    
         if (tentativa !== SENHA_CORRETA) {
             alert("Senha incorreta! Você será redirecionado.");
-            window.location.href = "https://www.google.com"; // Expulsa o usuário
-            
-            // Trava o carregamento do restante da página
+            window.location.href = "https://www.google.com"; 
             document.write("<style>body { display:none !important; }</style>");
             window.stop();
         }
@@ -26,11 +20,32 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-dark text-light">
+<body class="bg-dark text-light position-relative">
 
     <div id="app" class="d-flex flex-column vh-100" v-cloak>
         
-        <nav class="navbar navbar-expand-lg shadow-sm z-3 border-bottom border-dark-subtle" style="background-color: #11111a;">
+        <div v-if="alertasExpandidos" class="position-absolute top-0 start-0 w-100 h-100 z-3 d-flex justify-content-center align-items-start p-4" style="background: rgba(0,0,0,0.8); backdrop-filter: blur(4px);">
+            <div class="card bg-dark-main w-75 shadow-lg border border-danger">
+                <div class="card-header d-flex justify-content-between align-items-center bg-danger text-white border-0">
+                    <h5 class="mb-0 fw-bold">🚨 Relatório Completo de Alertas ({{ alertasFiltrados.length }})</h5>
+                    <button class="btn-close btn-close-white" @click="fecharModalAlertas"></button>
+                </div>
+                <div class="card-body overflow-auto p-3" style="max-height: 75vh;">
+                    <div v-for="alerta in alertasFiltrados" :key="alerta.id_pncp" class="bg-dark-panel border-start border-danger border-4 p-3 mb-2 rounded shadow-sm text-light d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="fw-bold text-warning fs-5">📍 {{ alerta.cidade_norm }} - {{ alerta.uf }}</span><br>
+                            <span class="text-light">{{ alerta.nome_orgao }}</span><br>
+                            <span class="text-secondary small">Portal: <b class="text-danger">{{ alerta.sistema_concorrente }}</b> | Data: <code>{{ alerta.data_publicacao.substring(0,10) }}</code></span>
+                        </div>
+                        <a :href="gerarLinkPNCP(alerta.id_pncp)" target="_blank" class="btn btn-outline-light ms-3 text-nowrap" v-if="alerta.id_pncp">
+                            🔗 Ver Edital no PNCP
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <nav class="navbar navbar-expand-lg shadow-sm z-2 border-bottom border-dark-subtle" style="background-color: #11111a;">
             <div class="container-fluid">
                 <a class="navbar-brand" href="#">
                     <img src="logo_licitanet.jpeg" alt="Logo Licitanet" height="45" class="d-inline-block align-text-top">
@@ -51,7 +66,7 @@
             </div>
         </nav>
 
-        <div class="d-flex flex-grow-1 overflow-hidden">
+        <div class="d-flex flex-grow-1 overflow-hidden z-1">
             
             <div class="sidebar p-3 shadow-sm d-flex flex-column z-2">
                 <h6 class="mb-3 text-muted border-bottom border-dark-subtle pb-2 fw-bold"> Filtros Globais</h6>
@@ -99,34 +114,19 @@
                 </div>
             </div>
 
-            <div class="main-content flex-grow-1 d-flex flex-column bg-dark-main">
+            <div class="main-content flex-grow-1 d-flex flex-column bg-dark-main position-relative">
                 
                 <div :class="abaAtiva === 'mapa' ? 'd-flex' : 'd-none'" class="flex-column h-100 w-100">
                     <div class="m-3 mb-0">
                         <div class="card bg-dark-panel border-0 shadow-sm">
-                            <div class="card-header bg-dark-panel border-bottom-0 d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#collapseAlertas" style="cursor: pointer;">
+                            <div class="card-header bg-dark-panel border-bottom-0 d-flex justify-content-between align-items-center">
                                 <h6 class="mb-0 text-danger fw-bold" v-if="alertasFiltrados.length > 0">
                                     🚨 Identificamos {{ alertasFiltrados.length }} prefeituras publicando fora!
                                 </h6>
                                 <h6 class="mb-0 text-success fw-bold" v-else>
                                     ✅ Sem alertas recentes de concorrência.
                                 </h6>
-                            </div>
-                            <div id="collapseAlertas" class="collapse show" v-if="alertasFiltrados.length > 0">
-                                <div class="card-body bg-dark-main p-2 alert-scroll" style="max-height: 120px; overflow-y: auto;">
-                                    
-                                    <div v-for="alerta in alertasFiltrados" :key="alerta.id_pncp" class="bg-dark-panel border-start border-danger border-4 p-2 mb-2 rounded shadow-sm text-light d-flex justify-content-between align-items-center" style="font-size: 13px;">
-                                        <div>
-                                            <span class="fw-bold text-warning">📍 {{ alerta.cidade_norm }} - {{ alerta.uf }}</span> | {{ alerta.nome_orgao }}<br>
-                                            Portal: <b class="text-danger">{{ alerta.sistema_concorrente }}</b> | Data: <code>{{ alerta.data_publicacao.substring(0,10) }}</code>
-                                        </div>
-                                        
-                                        <a :href="gerarLinkPNCP(alerta.id_pncp)" target="_blank" class="btn btn-sm btn-outline-light ms-2" style="font-size: 11px; white-space: nowrap;" v-if="alerta.id_pncp">
-                                            🔗 Ver PNCP
-                                        </a>
-                                    </div>
-
-                                </div>
+                                <button v-if="alertasFiltrados.length > 0" class="btn btn-sm btn-outline-danger" @click="abrirModalAlertas">Ver todos</button>
                             </div>
                         </div>
                     </div>
@@ -184,7 +184,7 @@
                     </div>
                 </div>
 
-                <div v-if="abaAtiva === 'radar'" class="p-4 h-100 overflow-auto w-100 bg-dark-main">
+                <div v-if="abaAtiva === 'radar'" class="p-4 h-100 overflow-auto w-100 bg-dark-main d-flex flex-column">
                     <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-dark-subtle pb-2">
                         <div>
                             <h4 class="fw-bold text-warning mb-1">🎯 Radar de Prospecção</h4>
@@ -193,7 +193,7 @@
                         <span class="badge bg-danger fs-5">{{ dadosRadarFiltrados.length }} Alvos</span>
                     </div>
                     
-                    <div class="table-responsive shadow-sm border border-dark-subtle rounded">
+                    <div class="table-responsive shadow-sm border border-dark-subtle rounded flex-grow-1">
                         <table class="table table-dark table-hover table-striped mb-0 align-middle">
                             <thead>
                                 <tr>
@@ -205,7 +205,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="item in dadosRadarFiltrados" :key="item.Orgao + item.Municipio">
+                                <tr v-for="item in radarPaginado" :key="item.Orgao + item.Municipio">
                                     <td><span class="badge bg-secondary">{{ item.Estado }}</span></td>
                                     <td class="fw-bold text-light">{{ item.Municipio }}</td>
                                     <td class="small text-muted">{{ item.Orgao }}</td>
@@ -225,6 +225,16 @@
                             </tbody>
                         </table>
                     </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-3 p-2 bg-dark-panel rounded border border-dark-subtle" v-if="dadosRadarFiltrados.length > 0">
+                        <span class="text-muted small">Mostrando página {{ paginaAtualRadar }} de {{ totalPaginasRadar }} (Total: {{ dadosRadarFiltrados.length }} órgãos)</span>
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-outline-secondary text-light" :disabled="paginaAtualRadar === 1" @click="mudarPagina(paginaAtualRadar - 1)">⬅️ Anterior</button>
+                            <button class="btn btn-sm btn-secondary disabled fw-bold">{{ paginaAtualRadar }}</button>
+                            <button class="btn btn-sm btn-outline-secondary text-light" :disabled="paginaAtualRadar === totalPaginasRadar" @click="mudarPagina(paginaAtualRadar + 1)">Próxima ➡️</button>
+                        </div>
+                    </div>
+
                 </div>
 
             </div>

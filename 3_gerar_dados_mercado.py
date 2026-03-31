@@ -8,13 +8,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- 1. CONFIGURAÇÕES ---
-# Agora o Python vai puxar as chaves de forma segura e invisível
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-TABELA_ORIGEM = "licitacoes" 
-
+# Puxa a string de conexão segura do MySQL
 MYSQL_STR = os.getenv("MYSQL_STR")
-TABELA_DESTINO = "licitacoes_raw"
 
 def gerar_dados_mercado():
     print("Conectando ao banco para gerar dados do dashboard...")
@@ -63,6 +58,8 @@ def gerar_dados_mercado():
 
     # --- 3. RADAR COMERCIAL (ÓRGÃOS INATIVOS) ---
     print("Calculando Radar de Vendas (Inativos)...")
+    
+    # AQUI ESTÁ A CORREÇÃO: Agrupando por IBGE e garantindo que Licitanet não publicou nos últimos 6 meses
     query_radar = """
     SELECT 
         uf AS Estado,
@@ -71,8 +68,9 @@ def gerar_dados_mercado():
         MAX(data_publicacao) AS Ultima_Publicacao,
         TIMESTAMPDIFF(MONTH, MAX(data_publicacao), CURDATE()) AS Meses_Inativo
     FROM licitacoes_raw
-    GROUP BY uf, cidade_norm, nome_orgao
+    GROUP BY cod_ibge, uf, cidade_norm, nome_orgao
     HAVING Meses_Inativo >= 2
+       AND MAX(CASE WHEN sistema_fonte = 'Licitanet' AND data_publicacao >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH) THEN 1 ELSE 0 END) = 0
     ORDER BY Meses_Inativo DESC, uf ASC, cidade_norm ASC
     """
     try:

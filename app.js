@@ -7,7 +7,7 @@ const CORES_SISTEMAS = {
     "Licitar Digital": "#008000", "Licita Mais": "#32CD32", "Conlicitacao": "#2E8B57",
     "Portal de Compras Públicas": "#8A2BE2", "Start Gov": "#8B4513",
     "Sem Dados no PNCP": "#444444", // Escureci o Sem Dados para combinar
-    "Outros": "#A9A9A9"    // Padrão para plataformas não mapeadas   
+    "Outros": "#A9A9A9" 
 };
 
 Chart.defaults.color = '#a0aabf';
@@ -19,7 +19,11 @@ createApp({
             dadosMercado: [], dadosFiltrados: [], alertas: [], alertasFiltrados: [], geoJsonDados: null,
             mapa: null, camadaGeoJson: null, graficoPlat: null, graficoConc: null,
             ufSelecionada: 'Todos', cidadeSelecionada: 'Todos', listaUFs: [], listaCidades: [], coresSistemas: CORES_SISTEMAS,
-            dadosRadar: [], dadosRadarFiltrados: [], radarTipoOrgao: 'Todos', radarMeses: 2
+            dadosRadar: [], dadosRadarFiltrados: [], radarTipoOrgao: 'Todos', radarMeses: 2,
+            // NOVAS VARIÁVEIS
+            alertasExpandidos: false,
+            paginaAtualRadar: 1,
+            itensPorPagina: 50
         }
     },
     computed: {
@@ -38,6 +42,15 @@ createApp({
             if(total === 0) return '0';
             const exclusivos = this.dadosFiltrados.filter(d => d.status_municipio === 'Exclusivo').length;
             return ((exclusivos / total) * 100).toFixed(1);
+        },
+        // NOVAS COMPUTEDS PARA PAGINAÇÃO
+        radarPaginado() {
+            const inicio = (this.paginaAtualRadar - 1) * this.itensPorPagina;
+            const fim = inicio + this.itensPorPagina;
+            return this.dadosRadarFiltrados.slice(inicio, fim);
+        },
+        totalPaginasRadar() {
+            return Math.ceil(this.dadosRadarFiltrados.length / this.itensPorPagina) || 1;
         }
     },
     async mounted() {
@@ -128,6 +141,7 @@ createApp({
                 filtrados = filtrados.filter(d => !/PREFEITURA|MUNICÍPIO|MUNICIPIO/i.test(d.Orgao) && !/CÂMARA|CAMARA/i.test(d.Orgao) && !/FUNDO|SECRETARIA|SAÚDE|SAUDE|ASSISTÊNCIA|ASSISTENCIA|EDUCAÇÃO|EDUCACAO/i.test(d.Orgao));
             }
             this.dadosRadarFiltrados = filtrados;
+            this.paginaAtualRadar = 1; // Reseta a página sempre que filtra
         },
 
         renderizarPoligonos() {
@@ -225,26 +239,30 @@ createApp({
             XLSX.writeFile(wb, `Relatorio_Mercado${nomeFiltro}.xlsx`);
         },
 
-        // --- NOVA FUNÇÃO PARA GERAR O LINK DO PNCP ---
         gerarLinkPNCP(id_pncp) {
             if (!id_pncp) return '#';
             try {
-                // Separa no hifen e barra. O formato é: CNPJ-X-NUMERO/ANO
-                // Ex: "05575916000193-1-000003/2026"
                 const partesBarra = id_pncp.split('/');
                 if (partesBarra.length !== 2) return '#';
-                const ano = partesBarra[1]; // "2026"
-
+                const ano = partesBarra[1]; 
                 const partesHifen = partesBarra[0].split('-');
                 if (partesHifen.length < 3) return '#';
-                const cnpj = partesHifen[0]; // "05575916000193"
-                const numeroStr = partesHifen[partesHifen.length - 1]; // "000003"
-                const numero = parseInt(numeroStr, 10); // Transformou em 3
-
+                const cnpj = partesHifen[0]; 
+                const numeroStr = partesHifen[partesHifen.length - 1]; 
+                const numero = parseInt(numeroStr, 10); 
                 return `https://pncp.gov.br/app/editais/${cnpj}/${ano}/${numero}`;
             } catch (e) {
                 console.error("Erro ao gerar link PNCP:", e);
                 return '#';
+            }
+        },
+
+        // NOVOS MÉTODOS DE CONTROLE DA UI
+        abrirModalAlertas() { this.alertasExpandidos = true; },
+        fecharModalAlertas() { this.alertasExpandidos = false; },
+        mudarPagina(p) {
+            if (p >= 1 && p <= this.totalPaginasRadar) {
+                this.paginaAtualRadar = p;
             }
         }
     }
