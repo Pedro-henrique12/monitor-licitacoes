@@ -17,7 +17,8 @@ createApp({
         return {
             abaAtiva: 'mapa', 
             dadosMercado: [], dadosFiltrados: [], alertas: [], alertasFiltrados: [], geoJsonDados: null,
-            mapa: null, camadaGeoJson: null, graficoPlat: null, graficoConc: null,
+            // Adicionado controle das camadas de Estados
+            mapa: null, camadaGeoJson: null, camadaEstados: null, geoJsonEstados: null, graficoPlat: null, graficoConc: null,
             ufSelecionada: 'Todos', cidadeSelecionada: 'Todos', listaUFs: [], listaCidades: [], coresSistemas: CORES_SISTEMAS,
             dadosRadar: [], dadosRadarFiltrados: [], radarTipoOrgao: 'Todos', radarMeses: 2, radarPlataforma: 'Todas', listaPlataformasRadar: [],
             alertasExpandidos: false, paginaAtualRadar: 1, itensPorPagina: 50
@@ -80,8 +81,12 @@ createApp({
                     }
                 } catch (e) { console.log("Radar pendente."); }
 
-                const [resAlertas, resDados, resGeo] = await Promise.all([
-                    fetch('alertas.json'), fetch('dados_mercado.json'), fetch('municipios_ibge.json/geojs-100-mun.json')
+                // Adicionado a malha de Estados do Github
+                const [resAlertas, resDados, resGeo, resEstados] = await Promise.all([
+                    fetch('alertas.json'), 
+                    fetch('dados_mercado.json'), 
+                    fetch('municipios_ibge.json/geojs-100-mun.json'),
+                    fetch('https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson')
                 ]);
                 
                 if (resAlertas.ok) {
@@ -90,6 +95,12 @@ createApp({
                 }
                 if (resDados.ok) this.dadosMercado = await resDados.json();
                 if (resGeo.ok) this.geoJsonDados = markRaw(await resGeo.json());
+                
+                // Carrega e desenha a camada de Estados
+                if (resEstados.ok) {
+                    this.geoJsonEstados = markRaw(await resEstados.json());
+                    this.renderizarEstados();
+                }
 
                 this.prepararFiltros();
                 this.filtrarDados(); 
@@ -148,6 +159,20 @@ createApp({
             this.paginaAtualRadar = 1; 
         },
 
+        // Função que desenha apenas o contorno branco dos Estados
+        renderizarEstados() {
+            if (!this.geoJsonEstados || !this.mapa) return;
+            
+            this.camadaEstados = markRaw(L.geoJSON(this.geoJsonEstados, {
+                style: {
+                    color: '#ffffff',   // Cor do contorno branco
+                    weight: 1.5,        // Espessura da linha
+                    fillOpacity: 0,     // Totalmente vazado
+                    interactive: false  // Não intercepta os cliques do mouse
+                }
+            })).addTo(this.mapa);
+        },
+
         renderizarPoligonos() {
             if (!this.geoJsonDados || !this.mapa) return;
             if (this.camadaGeoJson) this.mapa.removeLayer(this.camadaGeoJson);
@@ -179,6 +204,11 @@ createApp({
 
             if (this.ufSelecionada !== 'Todos' && this.camadaGeoJson.getBounds().isValid()) {
                 this.mapa.fitBounds(this.camadaGeoJson.getBounds());
+            }
+
+            // Garante que o contorno branco dos estados fique sempre por cima das cidades
+            if (this.camadaEstados) {
+                this.camadaEstados.bringToFront();
             }
         },
 
