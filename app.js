@@ -17,9 +17,12 @@ createApp({
         return {
             abaAtiva: 'mapa', 
             dadosMercado: [], dadosFiltrados: [], alertas: [], alertasFiltrados: [], geoJsonDados: null,
-            // Adicionado controle das camadas de Estados
             mapa: null, camadaGeoJson: null, camadaEstados: null, geoJsonEstados: null, graficoPlat: null, graficoConc: null,
-            ufSelecionada: 'Todos', cidadeSelecionada: 'Todos', listaUFs: [], listaCidades: [], coresSistemas: CORES_SISTEMAS,
+            
+            // AGORA É UM ARRAY PARA SUPORTAR VÁRIOS ESTADOS
+            ufsSelecionadas: ['Todos'], 
+            cidadeSelecionada: 'Todos', listaUFs: [], listaCidades: [], coresSistemas: CORES_SISTEMAS,
+            
             dadosRadar: [], dadosRadarFiltrados: [], radarTipoOrgao: 'Todos', radarMeses: 2, radarPlataforma: 'Todas', listaPlataformasRadar: [],
             alertasExpandidos: false, paginaAtualRadar: 1, itensPorPagina: 50
         }
@@ -81,7 +84,6 @@ createApp({
                     }
                 } catch (e) { console.log("Radar pendente."); }
 
-                // Adicionado a malha de Estados do Github
                 const [resAlertas, resDados, resGeo, resEstados] = await Promise.all([
                     fetch('alertas.json'), 
                     fetch('dados_mercado.json'), 
@@ -96,7 +98,6 @@ createApp({
                 if (resDados.ok) this.dadosMercado = await resDados.json();
                 if (resGeo.ok) this.geoJsonDados = markRaw(await resGeo.json());
                 
-                // Carrega e desenha a camada de Estados
                 if (resEstados.ok) {
                     this.geoJsonEstados = markRaw(await resEstados.json());
                     this.renderizarEstados();
@@ -113,21 +114,44 @@ createApp({
             this.listaUFs = ufs.sort();
         },
 
+        // NOVA FUNÇÃO: Controla os cliques nas caixinhas de estado
+        tratarSelecaoUFs(clicado) {
+            if (clicado === 'Todos') {
+                if (this.ufsSelecionadas.includes('Todos')) {
+                    this.ufsSelecionadas = ['Todos'];
+                } else {
+                    if (this.ufsSelecionadas.length === 0) this.ufsSelecionadas = ['Todos'];
+                }
+            } else {
+                const index = this.ufsSelecionadas.indexOf('Todos');
+                if (index > -1) this.ufsSelecionadas.splice(index, 1);
+                if (this.ufsSelecionadas.length === 0) this.ufsSelecionadas = ['Todos'];
+            }
+
+            // Se selecionar mais de 1 estado, reseta a cidade
+            if (this.ufsSelecionadas.includes('Todos') || this.ufsSelecionadas.length > 1) {
+                this.cidadeSelecionada = 'Todos';
+            }
+
+            this.filtrarDados();
+        },
+
         filtrarDados() {
-            if (this.ufSelecionada === 'Todos') {
+            if (this.ufsSelecionadas.includes('Todos')) {
                 this.dadosFiltrados = [...this.dadosMercado];
                 this.listaCidades = [];
-                this.cidadeSelecionada = 'Todos';
                 if(this.mapa) this.mapa.setView([-15.7801, -47.9292], 4); 
             } else {
-                this.dadosFiltrados = this.dadosMercado.filter(item => item.uf === this.ufSelecionada);
+                this.dadosFiltrados = this.dadosMercado.filter(item => this.ufsSelecionadas.includes(item.uf));
                 const cidades = [...new Set(this.dadosFiltrados.map(item => item.cidade_norm).filter(Boolean))];
                 this.listaCidades = cidades.sort();
-                if (this.cidadeSelecionada !== 'Todos') this.dadosFiltrados = this.dadosFiltrados.filter(item => item.cidade_norm === this.cidadeSelecionada);
+                if (this.cidadeSelecionada !== 'Todos') {
+                    this.dadosFiltrados = this.dadosFiltrados.filter(item => item.cidade_norm === this.cidadeSelecionada);
+                }
             }
 
             this.alertasFiltrados = this.alertas.filter(alerta => {
-                let bateUf = (this.ufSelecionada === 'Todos') || (alerta.uf === this.ufSelecionada);
+                let bateUf = this.ufsSelecionadas.includes('Todos') || this.ufsSelecionadas.includes(alerta.uf);
                 let bateCidade = (this.cidadeSelecionada === 'Todos') || (alerta.cidade_norm === this.cidadeSelecionada);
                 return bateUf && bateCidade;
             });
@@ -140,7 +164,10 @@ createApp({
         filtrarRadar() {
             let filtrados = this.dadosRadar || [];
             
-            if (this.ufSelecionada !== 'Todos') filtrados = filtrados.filter(d => d.Estado === this.ufSelecionada);
+            if (!this.ufsSelecionadas.includes('Todos')) {
+                filtrados = filtrados.filter(d => this.ufsSelecionadas.includes(d.Estado));
+            }
+
             if (this.radarPlataforma !== 'Todas') filtrados = filtrados.filter(d => d.Plataforma === this.radarPlataforma);
             
             filtrados = filtrados.filter(d => d.Meses_Inativo >= this.radarMeses);
@@ -159,17 +186,10 @@ createApp({
             this.paginaAtualRadar = 1; 
         },
 
-        // Função que desenha apenas o contorno branco dos Estados
         renderizarEstados() {
             if (!this.geoJsonEstados || !this.mapa) return;
-            
             this.camadaEstados = markRaw(L.geoJSON(this.geoJsonEstados, {
-                style: {
-                    color: '#ffffff',   // Cor do contorno branco
-                    weight: 1.5,        // Espessura da linha
-                    fillOpacity: 0,     // Totalmente vazado
-                    interactive: false  // Não intercepta os cliques do mouse
-                }
+                style: { color: '#ffffff', weight: 1.5, fillOpacity: 0, interactive: false }
             })).addTo(this.mapa);
         },
 
@@ -202,14 +222,11 @@ createApp({
                 }
             })).addTo(this.mapa);
 
-            if (this.ufSelecionada !== 'Todos' && this.camadaGeoJson.getBounds().isValid()) {
+            if (!this.ufsSelecionadas.includes('Todos') && this.camadaGeoJson.getBounds().isValid()) {
                 this.mapa.fitBounds(this.camadaGeoJson.getBounds());
             }
 
-            // Garante que o contorno branco dos estados fique sempre por cima das cidades
-            if (this.camadaEstados) {
-                this.camadaEstados.bringToFront();
-            }
+            if (this.camadaEstados) this.camadaEstados.bringToFront();
         },
 
         atualizarDashboards() {
@@ -256,7 +273,9 @@ createApp({
             const ws = XLSX.utils.json_to_sheet(this.dadosRadarFiltrados);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Alvos");
-            XLSX.writeFile(wb, `Alvos_Comerciais_${this.ufSelecionada}.xlsx`);
+            
+            let nomeFiltro = this.ufsSelecionadas.includes('Todos') ? 'Brasil' : (this.ufsSelecionadas.length > 3 ? 'Varios_Estados' : this.ufsSelecionadas.join('-'));
+            XLSX.writeFile(wb, `Alvos_Comerciais_${nomeFiltro}.xlsx`);
         },
         
         baixarRelatorio() {
@@ -268,7 +287,8 @@ createApp({
             const ws = XLSX.utils.json_to_sheet(dadosExcel);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Relatório");
-            let nomeFiltro = this.ufSelecionada !== 'Todos' ? `_${this.ufSelecionada}` : '_Brasil';
+            
+            let nomeFiltro = this.ufsSelecionadas.includes('Todos') ? '_Brasil' : (this.ufsSelecionadas.length > 3 ? '_Varios_Estados' : '_' + this.ufsSelecionadas.join('-'));
             if (this.cidadeSelecionada !== 'Todos') nomeFiltro += `_${this.cidadeSelecionada}`;
             XLSX.writeFile(wb, `Relatorio_Mercado${nomeFiltro}.xlsx`);
         },
@@ -285,18 +305,13 @@ createApp({
                 const numeroStr = partesHifen[partesHifen.length - 1]; 
                 const numero = parseInt(numeroStr, 10); 
                 return `https://pncp.gov.br/app/editais/${cnpj}/${ano}/${numero}`;
-            } catch (e) {
-                console.error("Erro ao gerar link PNCP:", e);
-                return '#';
-            }
+            } catch (e) { return '#'; }
         },
 
         abrirModalAlertas() { this.alertasExpandidos = true; },
         fecharModalAlertas() { this.alertasExpandidos = false; },
         mudarPagina(p) {
-            if (p >= 1 && p <= this.totalPaginasRadar) {
-                this.paginaAtualRadar = p;
-            }
+            if (p >= 1 && p <= this.totalPaginasRadar) this.paginaAtualRadar = p;
         }
     }
 }).mount('#app');

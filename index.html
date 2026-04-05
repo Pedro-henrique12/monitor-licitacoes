@@ -48,7 +48,7 @@
         <nav class="navbar navbar-expand-lg shadow-sm z-2 border-bottom border-dark-subtle" style="background-color: #11111a;">
             <div class="container-fluid">
                 <a class="navbar-brand" href="#">
-                    <img src="logo_licitanet.jpeg" alt="Logo Licitanet" height="45" class="d-inline-block align-text-top">
+                    <img src="logo.png" alt="Logo Licitanet" height="45" class="d-inline-block align-text-top">
                 </a>
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav ms-auto">
@@ -72,11 +72,17 @@
                 <h6 class="mb-3 text-muted border-bottom border-dark-subtle pb-2 fw-bold"> Filtros Globais</h6>
                 
                 <div class="mb-3">
-                    <label class="form-label">Estado:</label>
-                    <select class="form-select form-select-sm shadow-sm" v-model="ufSelecionada" @change="filtrarDados">
-                        <option value="Todos">Todos</option>
-                        <option v-for="uf in listaUFs" :key="uf" :value="uf">{{ uf }}</option>
-                    </select>
+                    <label class="form-label mb-1">Estados:</label>
+                    <div class="bg-dark-panel p-2 rounded border border-secondary shadow-sm" style="max-height: 140px; overflow-y: auto; font-size: 13px;">
+                        <div class="form-check border-bottom border-dark-subtle pb-1 mb-1">
+                            <input class="form-check-input" type="checkbox" value="Todos" v-model="ufsSelecionadas" @change="tratarSelecaoUFs('Todos')" id="uf_Todos">
+                            <label class="form-check-label fw-bold text-warning" for="uf_Todos">🌎 Todo o Brasil</label>
+                        </div>
+                        <div class="form-check" v-for="uf in listaUFs" :key="uf">
+                            <input class="form-check-input" type="checkbox" :value="uf" v-model="ufsSelecionadas" @change="tratarSelecaoUFs(uf)" :id="'uf_'+uf">
+                            <label class="form-check-label text-light" :for="'uf_'+uf">{{ uf }}</label>
+                        </div>
+                    </div>
                 </div>
 
                 <div v-if="abaAtiva === 'radar'" class="mt-2 mb-3 p-2 rounded bg-dark-main border-dark-subtle border">
@@ -102,10 +108,13 @@
 
                 <div class="mb-3" v-if="abaAtiva !== 'radar'">
                     <label class="form-label">Município:</label>
-                    <select class="form-select form-select-sm shadow-sm" v-model="cidadeSelecionada" @change="filtrarDados" :disabled="ufSelecionada === 'Todos'">
+                    <select class="form-select form-select-sm shadow-sm" v-model="cidadeSelecionada" @change="filtrarDados" :disabled="ufsSelecionadas.includes('Todos') || ufsSelecionadas.length > 1">
                         <option value="Todos">Todos</option>
                         <option v-for="cidade in listaCidades" :key="cidade" :value="cidade">{{ cidade }}</option>
                     </select>
+                    <small class="text-muted" style="font-size: 10px;" v-if="ufsSelecionadas.length > 1 && !ufsSelecionadas.includes('Todos')">
+                        *Selecione apenas 1 estado para filtrar a cidade.
+                    </small>
                 </div>
 
                 <button v-if="abaAtiva !== 'radar'" class="btn btn-outline-warning btn-sm fw-bold w-100 mb-4" @click="baixarRelatorio">📥 Baixar Excel Geral</button>
@@ -142,7 +151,7 @@
                 <div v-if="abaAtiva === 'dashboards'" class="p-4 h-100 overflow-auto w-100 bg-dark-main">
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <h4 class="fw-bold text-white mb-0"> Visão Estratégica</h4>
-                        <span class="badge bg-secondary fs-6 text-white">{{ ufSelecionada === 'Todos' ? 'Brasil' : ufSelecionada }}</span>
+                        <span class="badge bg-secondary fs-6 text-white">{{ ufsSelecionadas.includes('Todos') ? 'Brasil' : ufsSelecionadas.join(', ') }}</span>
                     </div>
                     
                     <div class="row g-3 mb-4">
