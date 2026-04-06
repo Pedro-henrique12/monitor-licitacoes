@@ -7,7 +7,7 @@ const CORES_SISTEMAS = {
     "Licitar Digital": "#008000", "Licita Mais": "#32CD32", "Conlicitacao": "#2E8B57",
     "Portal de Compras Públicas": "#8A2BE2", "Start Gov": "#8B4513",
     "Sem Dados no PNCP": "#444444", // Escureci o Sem Dados para combinar
-    "Outros": "#A9A9A9"     
+    "Outros": "#A9A9A9"    
 };
 
 Chart.defaults.color = '#a0aabf';
@@ -20,14 +20,14 @@ createApp({
             mapa: null, camadaGeoJson: null, camadaEstados: null, geoJsonEstados: null, graficoPlat: null, graficoConc: null,
             
             ufsSelecionadas: ['Todos'], 
-            cidadeSelecionada: 'Todos', listaUFs: [], listaCidades: [], coresSistemas: CORES_SISTEMAS,
+            cidadeSelecionada: '', // AGORA INICIA VAZIO
+            listaUFs: [], listaCidades: [], coresSistemas: CORES_SISTEMAS,
             
             dadosRadar: [], dadosRadarFiltrados: [], radarTipoOrgao: 'Todos', radarMeses: 2, radarPlataforma: 'Todas', listaPlataformasRadar: [],
             alertasExpandidos: false, paginaAtualRadar: 1, itensPorPagina: 50
         }
     },
     computed: {
-        // NOVA LÓGICA: Escreve o texto do botão de estados dinamicamente
         textoEstadosSelecionados() {
             if (this.ufsSelecionadas.includes('Todos') || this.ufsSelecionadas.length === 0) return 'Todos';
             if (this.ufsSelecionadas.length <= 3) return this.ufsSelecionadas.join(', ');
@@ -133,7 +133,7 @@ createApp({
             }
 
             if (this.ufsSelecionadas.includes('Todos') || this.ufsSelecionadas.length > 1) {
-                this.cidadeSelecionada = 'Todos';
+                this.cidadeSelecionada = ''; // Limpa a busca se trocar de estado
             }
 
             this.filtrarDados();
@@ -148,14 +148,16 @@ createApp({
                 this.dadosFiltrados = this.dadosMercado.filter(item => this.ufsSelecionadas.includes(item.uf));
                 const cidades = [...new Set(this.dadosFiltrados.map(item => item.cidade_norm).filter(Boolean))];
                 this.listaCidades = cidades.sort();
-                if (this.cidadeSelecionada !== 'Todos') {
+                
+                // Filtra pelo que o usuário digitou/selecionou
+                if (this.cidadeSelecionada) {
                     this.dadosFiltrados = this.dadosFiltrados.filter(item => item.cidade_norm === this.cidadeSelecionada);
                 }
             }
 
             this.alertasFiltrados = this.alertas.filter(alerta => {
                 let bateUf = this.ufsSelecionadas.includes('Todos') || this.ufsSelecionadas.includes(alerta.uf);
-                let bateCidade = (this.cidadeSelecionada === 'Todos') || (alerta.cidade_norm === this.cidadeSelecionada);
+                let bateCidade = (!this.cidadeSelecionada) || (alerta.cidade_norm === this.cidadeSelecionada);
                 return bateUf && bateCidade;
             });
 
@@ -292,7 +294,7 @@ createApp({
             XLSX.utils.book_append_sheet(wb, ws, "Relatório");
             
             let nomeFiltro = this.ufsSelecionadas.includes('Todos') ? '_Brasil' : (this.ufsSelecionadas.length > 3 ? '_Varios_Estados' : '_' + this.ufsSelecionadas.join('-'));
-            if (this.cidadeSelecionada !== 'Todos') nomeFiltro += `_${this.cidadeSelecionada}`;
+            if (this.cidadeSelecionada) nomeFiltro += `_${this.cidadeSelecionada}`;
             XLSX.writeFile(wb, `Relatorio_Mercado${nomeFiltro}.xlsx`);
         },
 
