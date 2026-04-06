@@ -7,7 +7,7 @@ const CORES_SISTEMAS = {
     "Licitar Digital": "#008000", "Licita Mais": "#32CD32", "Conlicitacao": "#2E8B57",
     "Portal de Compras Públicas": "#8A2BE2", "Start Gov": "#8B4513",
     "Sem Dados no PNCP": "#444444", // Escureci o Sem Dados para combinar
-    "Outros": "#A9A9A9" 
+    "Outros": "#A9A9A9"     
 };
 
 Chart.defaults.color = '#a0aabf';
@@ -19,7 +19,6 @@ createApp({
             dadosMercado: [], dadosFiltrados: [], alertas: [], alertasFiltrados: [], geoJsonDados: null,
             mapa: null, camadaGeoJson: null, camadaEstados: null, geoJsonEstados: null, graficoPlat: null, graficoConc: null,
             
-            // AGORA É UM ARRAY PARA SUPORTAR VÁRIOS ESTADOS
             ufsSelecionadas: ['Todos'], 
             cidadeSelecionada: 'Todos', listaUFs: [], listaCidades: [], coresSistemas: CORES_SISTEMAS,
             
@@ -28,6 +27,12 @@ createApp({
         }
     },
     computed: {
+        // NOVA LÓGICA: Escreve o texto do botão de estados dinamicamente
+        textoEstadosSelecionados() {
+            if (this.ufsSelecionadas.includes('Todos') || this.ufsSelecionadas.length === 0) return 'Todos';
+            if (this.ufsSelecionadas.length <= 3) return this.ufsSelecionadas.join(', ');
+            return `${this.ufsSelecionadas.length} estados selecionados`;
+        },
         plataformaLider() {
             if(this.dadosFiltrados.length === 0) return '-';
             const contagem = {};
@@ -114,7 +119,6 @@ createApp({
             this.listaUFs = ufs.sort();
         },
 
-        // NOVA FUNÇÃO: Controla os cliques nas caixinhas de estado
         tratarSelecaoUFs(clicado) {
             if (clicado === 'Todos') {
                 if (this.ufsSelecionadas.includes('Todos')) {
@@ -128,7 +132,6 @@ createApp({
                 if (this.ufsSelecionadas.length === 0) this.ufsSelecionadas = ['Todos'];
             }
 
-            // Se selecionar mais de 1 estado, reseta a cidade
             if (this.ufsSelecionadas.includes('Todos') || this.ufsSelecionadas.length > 1) {
                 this.cidadeSelecionada = 'Todos';
             }

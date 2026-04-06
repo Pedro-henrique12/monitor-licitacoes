@@ -71,18 +71,25 @@
             <div class="sidebar p-3 shadow-sm d-flex flex-column z-2">
                 <h6 class="mb-3 text-muted border-bottom border-dark-subtle pb-2 fw-bold"> Filtros Globais</h6>
                 
-                <div class="mb-3">
+                <div class="mb-3 dropdown">
                     <label class="form-label mb-1">Estados:</label>
-                    <div class="bg-dark-panel p-2 rounded border border-secondary shadow-sm" style="max-height: 140px; overflow-y: auto; font-size: 13px;">
-                        <div class="form-check border-bottom border-dark-subtle pb-1 mb-1">
-                            <input class="form-check-input" type="checkbox" value="Todos" v-model="ufsSelecionadas" @change="tratarSelecaoUFs('Todos')" id="uf_Todos">
-                            <label class="form-check-label fw-bold text-warning" for="uf_Todos">🌎 Todo o Brasil</label>
-                        </div>
-                        <div class="form-check" v-for="uf in listaUFs" :key="uf">
-                            <input class="form-check-input" type="checkbox" :value="uf" v-model="ufsSelecionadas" @change="tratarSelecaoUFs(uf)" :id="'uf_'+uf">
-                            <label class="form-check-label text-light" :for="'uf_'+uf">{{ uf }}</label>
-                        </div>
-                    </div>
+                    <button class="form-select form-select-sm bg-dark-panel text-light shadow-sm dropdown-toggle text-start border-secondary" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                        {{ textoEstadosSelecionados }}
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-dark shadow border-secondary p-2 w-100" style="max-height: 250px; overflow-y: auto; font-size: 13px;">
+                        <li class="mb-1 pb-1 border-bottom border-secondary">
+                            <div class="form-check px-2 m-0">
+                                <input class="form-check-input" type="checkbox" value="Todos" v-model="ufsSelecionadas" @change="tratarSelecaoUFs('Todos')" id="uf_Todos_drop">
+                                <label class="form-check-label fw-bold text-warning w-100" for="uf_Todos_drop" style="cursor: pointer;">🌎 Todo o Brasil</label>
+                            </div>
+                        </li>
+                        <li v-for="uf in listaUFs" :key="uf">
+                            <div class="form-check px-2 m-0 py-1" style="transition: background 0.2s;" onmouseover="this.style.background='#333'" onmouseout="this.style.background='transparent'">
+                                <input class="form-check-input" type="checkbox" :value="uf" v-model="ufsSelecionadas" @change="tratarSelecaoUFs(uf)" :id="'uf_drop_'+uf">
+                                <label class="form-check-label text-light w-100" :for="'uf_drop_'+uf" style="cursor: pointer;">{{ uf }}</label>
+                            </div>
+                        </li>
+                    </ul>
                 </div>
 
                 <div v-if="abaAtiva === 'radar'" class="mt-2 mb-3 p-2 rounded bg-dark-main border-dark-subtle border">
