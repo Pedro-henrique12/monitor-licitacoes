@@ -179,4 +179,4 @@ def coletar_por_lotes(data_inicio_str, data_fim_str):
             time.sleep(0.5)
 
 if __name__ == "__main__":
-    coletar_por_lotes("20260409", "20260412")
+    coletar_por_lotes("20260413", "20260415")
