@@ -21,7 +21,7 @@ createApp({
             
             ufsSelecionadas: ['Todos'], 
             cidadeSelecionada: 'Todos', 
-            buscaCidade: '', // VARIÁVEL DA BARRA DE PESQUISA INTERNA
+            buscaCidade: '', 
             
             listaUFs: [], listaCidades: [], coresSistemas: CORES_SISTEMAS,
             
@@ -30,7 +30,6 @@ createApp({
         }
     },
     computed: {
-        // FILTRA AS CIDADES CONFORME O USUÁRIO DIGITA
         cidadesFiltradasNaBusca() {
             if (!this.buscaCidade) return this.listaCidades;
             const termo = this.buscaCidade.toLowerCase();
@@ -89,7 +88,8 @@ createApp({
         async carregarArquivos() {
             try {
                 try {
-                    const resRadar = await fetch('radar.json');
+                    // CAMINHOS ATUALIZADOS: Volta uma pasta (../) de frontend/ e entra em data/output/
+                    const resRadar = await fetch('../data/output/radar.json');
                     if (resRadar.ok) {
                         this.dadosRadar = await resRadar.json();
                         const plats = [...new Set(this.dadosRadar.map(item => item.Plataforma).filter(Boolean))];
@@ -98,9 +98,11 @@ createApp({
                 } catch (e) { console.log("Radar pendente."); }
 
                 const [resAlertas, resDados, resGeo, resEstados] = await Promise.all([
-                    fetch('alertas.json'), 
-                    fetch('dados_mercado.json'), 
-                    fetch('municipios_ibge.json/geojs-100-mun.json'),
+                    fetch('../data/output/alertas.json'), 
+                    fetch('../data/output/dados_mercado.json'), 
+                    // Assume que você renomeou o arquivo de geojson para "municipios.geojson" como o Claude sugeriu
+                    // Se não renomeou, mude a linha abaixo para: fetch('../data/geo/geojs-100-mun.json')
+                    fetch('../data/geo/municipios.geojson'), 
                     fetch('https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson')
                 ]);
                 
@@ -148,10 +150,9 @@ createApp({
             this.filtrarDados();
         },
 
-        // NOVA FUNÇÃO: Acionada ao clicar em uma cidade no novo dropdown
         selecionarCidade(cidade) {
             this.cidadeSelecionada = cidade;
-            this.buscaCidade = ''; // Limpa a barra de pesquisa para a próxima vez
+            this.buscaCidade = ''; 
             this.filtrarDados();
         },
 

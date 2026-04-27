@@ -4,8 +4,19 @@ import json
 import os
 from dotenv import load_dotenv
 
-# Abre o cofre (.env)
-load_dotenv()
+# --- LÓGICA DE CAMINHOS DINÂMICOS ---
+# Pega a pasta onde o gerador.py está (etl/processors) e sobe duas para a raiz do projeto
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Define as pastas exatas
+CONFIG_PATH = os.path.join(BASE_DIR, 'config', '.env')
+OUTPUT_DIR = os.path.join(BASE_DIR, 'data', 'output')
+
+# Garante que a pasta de saída exista
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# Abre o arquivo de configuração (.env) lá na pasta config
+load_dotenv(CONFIG_PATH)
 
 # Puxa a string de conexão segura do MySQL
 MYSQL_STR = os.getenv("MYSQL_STR")
@@ -24,9 +35,10 @@ def gerar_dados_mercado():
         df_mapa['status_municipio'] = df_mapa['status_municipio'].fillna('Sem Registro')
         df_mapa['resumo_disputa'] = df_mapa['resumo_disputa'].fillna('Nenhuma licitação encontrada.')
         
-        with open('dados_mercado.json', 'w', encoding='utf-8') as f:
+        path_mercado = os.path.join(OUTPUT_DIR, 'dados_mercado.json')
+        with open(path_mercado, 'w', encoding='utf-8') as f:
             json.dump(df_mapa.to_dict(orient='records'), f, ensure_ascii=False)
-        print(f"✅ dados_mercado.json gerado.")
+        print(f"✅ dados_mercado.json gerado na pasta data/output/.")
 
     # --- 2. ALERTAS DE CONCORRÊNCIA ---
     print("Buscando alertas de concorrência...")
@@ -50,9 +62,10 @@ def gerar_dados_mercado():
     try:
         df_alertas = pd.read_sql(query_alertas, engine)
         df_alertas['data_publicacao'] = df_alertas['data_publicacao'].astype(str)
-        with open('alertas.json', 'w', encoding='utf-8') as f:
+        path_alertas = os.path.join(OUTPUT_DIR, 'alertas.json')
+        with open(path_alertas, 'w', encoding='utf-8') as f:
             json.dump(df_alertas.to_dict(orient='records'), f, ensure_ascii=False)
-        print(f"✅ alertas.json gerado.")
+        print(f"✅ alertas.json gerado na pasta data/output/.")
     except Exception as e: print(f"Erro nos alertas: {e}")
 
     # --- 3. RADAR COMERCIAL (ÓRGÃOS INDIVIDUALIZADOS POR CNPJ) ---
@@ -78,8 +91,7 @@ def gerar_dados_mercado():
     FROM licitacoes_raw r
     WHERE r.id_pncp IS NOT NULL AND r.id_pncp LIKE '%%-%%'
     
-    -- A ALTERAÇÃO NECESSÁRIA ESTÁ AQUI:
-    -- Adicionamos r.uf e r.cidade_norm para satisfazer a regra 'only_full_group_by'
+    -- Correção do ONLY_FULL_GROUP_BY incluída
     GROUP BY 
         r.uf,
         r.cidade_norm,
@@ -92,9 +104,10 @@ def gerar_dados_mercado():
         df_radar = pd.read_sql(query_radar, engine)
         if not df_radar.empty:
             df_radar['Ultima_Publicacao'] = pd.to_datetime(df_radar['Ultima_Publicacao']).dt.strftime('%d/%m/%Y')
-        with open('radar.json', 'w', encoding='utf-8') as f:
+        path_radar = os.path.join(OUTPUT_DIR, 'radar.json')
+        with open(path_radar, 'w', encoding='utf-8') as f:
             json.dump(df_radar.to_dict(orient='records'), f, ensure_ascii=False)
-        print(f"✅ radar.json gerado com {len(df_radar)} registros individuais.")
+        print(f"✅ radar.json gerado na pasta data/output/ com {len(df_radar)} registros individuais.")
     except Exception as e: print(f"Erro no radar: {e}")
 
 if __name__ == "__main__":
