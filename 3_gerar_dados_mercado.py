@@ -29,7 +29,6 @@ def gerar_dados_mercado():
         print(f"✅ dados_mercado.json gerado.")
 
     # --- 2. ALERTAS DE CONCORRÊNCIA ---
-    # (Mantido conforme as regras de interesse para prefeituras)
     print("Buscando alertas de concorrência...")
     query_alertas = """
     SELECT DISTINCT r.cidade_norm, r.uf, r.sistema_fonte AS sistema_concorrente, r.id_pncp, r.data_publicacao, r.nome_orgao
@@ -59,8 +58,6 @@ def gerar_dados_mercado():
     # --- 3. RADAR COMERCIAL (ÓRGÃOS INDIVIDUALIZADOS POR CNPJ) ---
     print("Calculando Radar de Vendas (Inativos por CNPJ)...")
     
-    # A MUDANÇA: Agrupamos pelo CNPJ COMPLETO (14 dígitos).
-    # Isso separa Fundo de Saúde (CNPJ A) de Prefeitura (CNPJ B).
     query_radar = """
     SELECT 
         r.uf AS Estado,
@@ -80,8 +77,14 @@ def gerar_dados_mercado():
         
     FROM licitacoes_raw r
     WHERE r.id_pncp IS NOT NULL AND r.id_pncp LIKE '%%-%%'
+    
+    -- A ALTERAÇÃO NECESSÁRIA ESTÁ AQUI:
+    -- Adicionamos r.uf e r.cidade_norm para satisfazer a regra 'only_full_group_by'
     GROUP BY 
-        SUBSTRING_INDEX(r.id_pncp, '-', 1) -- AGRUPAMENTO POR CNPJ ÚNICO
+        r.uf,
+        r.cidade_norm,
+        SUBSTRING_INDEX(r.id_pncp, '-', 1)
+        
     HAVING Meses_Inativo >= 2
     ORDER BY Meses_Inativo DESC, r.uf ASC, r.cidade_norm ASC
     """
