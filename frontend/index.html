@@ -247,7 +247,7 @@
                                     <th>Última Plataforma</th>
                                     <th>Última Publicação</th>
                                     <th style="min-width: 150px;">Inatividade</th>
-                                </tr>
+                                    <th class="text-center">Ação</th> </tr>
                             </thead>
                             <tbody>
                                 <tr v-for="item in radarPaginado" :key="item.Orgao + item.Municipio">
@@ -264,9 +264,15 @@
                                             </div>
                                         </div>
                                     </td>
+                                    
+                                    <td class="text-center">
+                                        <a :href="gerarLinkPNCP(item.Ultimo_ID_PNCP)" target="_blank" class="btn btn-sm btn-outline-info text-nowrap" v-if="item.Ultimo_ID_PNCP" title="Ver edital no portal do PNCP">
+                                            🔗 PNCP
+                                        </a>
+                                    </td>
                                 </tr>
                                 <tr v-if="dadosRadarFiltrados.length === 0">
-                                    <td colspan="6" class="text-center py-4 text-muted">Nenhum alvo encontrado para os filtros atuais.</td>
+                                    <td colspan="7" class="text-center py-4 text-muted">Nenhum alvo encontrado para os filtros atuais.</td>
                                 </tr>
                             </tbody>
                         </table>
