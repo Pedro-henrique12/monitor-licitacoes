@@ -88,7 +88,6 @@ createApp({
         async carregarArquivos() {
             try {
                 try {
-                    // CAMINHOS ATUALIZADOS: Volta uma pasta (../) de frontend/ e entra em data/output/
                     const resRadar = await fetch('../data/output/radar.json');
                     if (resRadar.ok) {
                         this.dadosRadar = await resRadar.json();
@@ -100,9 +99,7 @@ createApp({
                 const [resAlertas, resDados, resGeo, resEstados] = await Promise.all([
                     fetch('../data/output/alertas.json'), 
                     fetch('../data/output/dados_mercado.json'), 
-                    // Assume que você renomeou o arquivo de geojson para "municipios.geojson" como o Claude sugeriu
-                    // Se não renomeou, mude a linha abaixo para: fetch('../data/geo/geojs-100-mun.json')
-                    fetch('../data/geo/municipios.geojson'), 
+                    fetch('../data/geo/municipios_ibge.json/geojs-100-mun.json'), // <--- CAMINHO CORRIGIDO AQUI
                     fetch('https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson')
                 ]);
                 
