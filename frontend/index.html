@@ -246,7 +246,7 @@
                                     <th>Órgão</th>
                                     <th>Última Plataforma</th>
                                     <th>Última Publicação</th>
-                                    <th style="min-width: 150px;">Inatividade</th>
+                                    <th class="text-center">Inatividade</th>
                                     <th class="text-center">Ação</th> </tr>
                             </thead>
                             <tbody>
@@ -256,13 +256,8 @@
                                     <td class="small text-muted">{{ item.Orgao }}</td>
                                     <td><span class="badge bg-dark border border-secondary text-light">{{ item.Plataforma }}</span></td>
                                     <td class="text-light">{{ item.Ultima_Publicacao }}</td>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <span class="me-2 fw-bold text-danger">{{ item.Meses_Inativo }}m</span>
-                                            <div class="progress flex-grow-1 bg-dark" style="height: 8px; border: 1px solid #333;">
-                                                <div class="progress-bar bg-danger" :style="{ width: (item.Meses_Inativo > 12 ? 100 : (item.Meses_Inativo/12)*100) + '%' }"></div>
-                                            </div>
-                                        </div>
+                                    <td>class="text-center fw-bold text-danger">
+                                        {{ item.Meses_Inativo }} meses
                                     </td>
                                     
                                     <td class="text-center">
