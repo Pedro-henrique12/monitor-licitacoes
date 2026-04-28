@@ -71,7 +71,7 @@ def gerar_dados_mercado():
     # --- 3. RADAR COMERCIAL (ÓRGÃOS INDIVIDUALIZADOS POR CNPJ) ---
     print("Calculando Radar de Vendas (Inativos por CNPJ)...")
     
-    query_radar = """
+query_radar = """
     SELECT 
         r.uf AS Estado,
         r.cidade_norm AS Municipio,
@@ -86,12 +86,15 @@ def gerar_dados_mercado():
         SUBSTRING_INDEX(MAX(CONCAT(r.data_publicacao, '||', r.sistema_fonte)), '||', -1) AS Plataforma,
         
         -- Traz o CNPJ Completo para o seu vendedor saber exatamente quem é
-        SUBSTRING_INDEX(r.id_pncp, '-', 1) AS CNPJ
+        SUBSTRING_INDEX(r.id_pncp, '-', 1) AS CNPJ,
+        
+        -- NOVA LINHA: Traz o ID_PNCP atrelado à data mais recente para o botão do frontend
+        SUBSTRING_INDEX(MAX(CONCAT(r.data_publicacao, '||', r.id_pncp)), '||', -1) AS Ultimo_ID_PNCP
         
     FROM licitacoes_raw r
     WHERE r.id_pncp IS NOT NULL AND r.id_pncp LIKE '%%-%%'
     
-    -- Correção do ONLY_FULL_GROUP_BY incluída
+    -- Correção do ONLY_FULL_GROUP_BY incluída e mantida
     GROUP BY 
         r.uf,
         r.cidade_norm,
