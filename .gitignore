@@ -8,9 +8,9 @@ config/.env
 # 📊 DADOS E BACKUPS
 # =========================
 # Ignora arquivos gerados automaticamente para não pesar o repositório
-data/output/*.json
-data/output/*.xlsx
-data/output/*.csv
+#data/output/*.json
+#data/output/*.xlsx
+#data/output/*.csv
 dados.json
 
 # Bancos de dados locais e backups
