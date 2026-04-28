@@ -68,10 +68,10 @@ def gerar_dados_mercado():
         print(f"✅ alertas.json gerado na pasta data/output/.")
     except Exception as e: print(f"Erro nos alertas: {e}")
 
-    # --- 3. RADAR COMERCIAL (ÓRGÃOS INDIVIDUALIZADOS POR CNPJ) ---
-    print("Calculando Radar de Vendas (Inativos por CNPJ)...")
+    # --- 3. RADAR COMERCIAL (ÓRGÃOS INDIVIDUALIZADOS POR CNPJ) ---    
+    print("Gerando dados do Radar Comercial...")
     
-query_radar = """
+    query_radar = """
     SELECT 
         r.uf AS Estado,
         r.cidade_norm AS Municipio,
@@ -103,15 +103,26 @@ query_radar = """
     HAVING Meses_Inativo >= 2
     ORDER BY Meses_Inativo DESC, r.uf ASC, r.cidade_norm ASC
     """
+
     try:
+        # A conexão 'engine' agora funciona porque estamos dentro da função principal!
         df_radar = pd.read_sql(query_radar, engine)
+        
         if not df_radar.empty:
             df_radar['Ultima_Publicacao'] = pd.to_datetime(df_radar['Ultima_Publicacao']).dt.strftime('%d/%m/%Y')
+            
         path_radar = os.path.join(OUTPUT_DIR, 'radar.json')
+        
         with open(path_radar, 'w', encoding='utf-8') as f:
             json.dump(df_radar.to_dict(orient='records'), f, ensure_ascii=False)
+            
         print(f"✅ radar.json gerado na pasta data/output/ com {len(df_radar)} registros individuais.")
-    except Exception as e: print(f"Erro no radar: {e}")
+        
+    except Exception as e: 
+        print(f"❌ Erro no radar: {e}")
 
+# ====================================================================
+# FIM DO ARQUIVO (FORA DA FUNÇÃO, COLADO NA MARGEM ESQUERDA)
+# ====================================================================
 if __name__ == "__main__":
     gerar_dados_mercado()
