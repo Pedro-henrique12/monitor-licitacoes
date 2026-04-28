@@ -18,7 +18,6 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="bg-dark text-light position-relative">
@@ -61,6 +60,9 @@
                         </li>
                         <li class="nav-item">
                             <a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'radar', 'text-secondary': abaAtiva !== 'radar' }" @click="mudarAba('radar')" href="#" style="cursor: pointer;">🎯 Radar Comercial</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'historico', 'text-secondary': abaAtiva !== 'historico' }" @click="mudarAba('historico')" href="#" style="cursor: pointer;">📜 Histórico</a>
                         </li>
                     </ul>
                 </div>
@@ -146,11 +148,11 @@
                     </small>
                 </div>
 
-                <button v-if="abaAtiva !== 'radar'" class="btn btn-outline-warning btn-sm fw-bold w-100 mb-4" @click="baixarRelatorio">📥 Baixar Excel Geral</button>
+                <button v-if="abaAtiva !== 'radar' && abaAtiva !== 'historico'" class="btn btn-outline-warning btn-sm fw-bold w-100 mb-4" @click="baixarRelatorio">📥 Baixar Excel Geral</button>
                 <button v-if="abaAtiva === 'radar'" class="btn btn-danger btn-sm fw-bold w-100 mb-4" @click="baixarRelatorioRadar">📥 Baixar Excel Radar</button>
 
-                <h6 class="text-muted mb-2 border-bottom border-dark-subtle pb-1 fw-bold" v-show="abaAtiva === 'mapa'">🎨 Plataformas</h6>
-                <div class="legend-container flex-grow-1" v-show="abaAtiva === 'mapa'">
+                <h6 class="text-muted mb-2 border-bottom border-dark-subtle pb-1 fw-bold" v-show="abaAtiva === 'mapa' || abaAtiva === 'historico'">🎨 Plataformas</h6>
+                <div class="legend-container flex-grow-1" v-show="abaAtiva === 'mapa' || abaAtiva === 'historico'">
                     <div v-for="(cor, sistema) in coresSistemas" :key="sistema" class="legend-item d-flex align-items-center mb-1">
                         <span class="color-box shadow-sm" :style="{ backgroundColor: cor }"></span>
                         <span class="legend-text text-truncate" :title="sistema">{{ sistema }}</span>
@@ -247,7 +249,8 @@
                                     <th>Última Plataforma</th>
                                     <th>Última Publicação</th>
                                     <th class="text-center">Inatividade</th>
-                                    <th class="text-center">Ação</th> </tr>
+                                    <th class="text-center">Ação</th>
+                                </tr>
                             </thead>
                             <tbody>
                                 <tr v-for="item in radarPaginado" :key="item.Orgao + item.Municipio">
@@ -256,6 +259,7 @@
                                     <td class="small text-muted">{{ item.Orgao }}</td>
                                     <td><span class="badge bg-dark border border-secondary text-light">{{ item.Plataforma }}</span></td>
                                     <td class="text-light">{{ item.Ultima_Publicacao }}</td>
+                                    
                                     <td class="text-center fw-bold text-danger">
                                         {{ item.Meses_Inativo }} meses
                                     </td>
@@ -274,14 +278,55 @@
                     </div>
 
                     <div class="d-flex justify-content-between align-items-center mt-3 p-2 bg-dark-panel rounded border border-dark-subtle" v-if="dadosRadarFiltrados.length > 0">
-                        <span class="text-muted small">Mostrando página {{ paginaAtualRadar }} de {{ totalPaginasRadar }} (Total: {{ dadosRadarFiltrados.length }} órgãos)</span>
+                        <span class="text-muted small">Mostrando página {{ paginaAtualRadar }} de {{ totalPaginasRadar }}</span>
                         <div class="btn-group">
                             <button class="btn btn-sm btn-outline-secondary text-light" :disabled="paginaAtualRadar === 1" @click="mudarPagina(paginaAtualRadar - 1)">⬅️ Anterior</button>
                             <button class="btn btn-sm btn-secondary disabled fw-bold">{{ paginaAtualRadar }}</button>
                             <button class="btn btn-sm btn-outline-secondary text-light" :disabled="paginaAtualRadar === totalPaginasRadar" @click="mudarPagina(paginaAtualRadar + 1)">Próxima ➡️</button>
                         </div>
                     </div>
+                </div>
 
+                <div v-if="abaAtiva === 'historico'" class="p-4 h-100 overflow-auto w-100 bg-dark-main">
+                    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-dark-subtle pb-2">
+                        <h4 class="fw-bold text-info mb-1">📜 Raio-X do Município</h4>
+                    </div>
+
+                    <div v-if="Object.keys(historicoFiltrado).length === 0" class="text-center mt-5 text-muted">
+                        <h3 style="font-size: 3rem;">🏢</h3>
+                        <h5>Selecione 1 Estado e 1 Município no menu lateral</h5>
+                        <p>Para ver as últimas 10 publicações de cada órgão desta cidade e a concorrência de plataformas.</p>
+                    </div>
+
+                    <div v-else v-for="(licitacoes, orgao) in historicoFiltrado" :key="orgao" class="card bg-dark-panel border-secondary mb-4 shadow-sm">
+                        <div class="card-header bg-dark border-secondary text-light fw-bold fs-5">
+                            {{ orgao }}
+                        </div>
+                        <div class="card-body p-0">
+                            <table class="table table-dark table-hover table-sm mb-0">
+                                <thead class="text-muted small">
+                                    <tr>
+                                        <th class="ps-3">Data da Publicação</th>
+                                        <th>Plataforma Utilizada</th>
+                                        <th class="text-end pe-3">Edital</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="lic in licitacoes" :key="lic.id_pncp">
+                                        <td class="ps-3 text-light">{{ lic.data_publicacao }}</td>
+                                        <td>
+                                            <span class="badge" :style="{ backgroundColor: coresSistemas[lic.plataforma] || coresSistemas['Outros'] }">
+                                                {{ lic.plataforma }}
+                                            </span>
+                                        </td>
+                                        <td class="text-end pe-3">
+                                            <a :href="gerarLinkPNCP(lic.id_pncp)" target="_blank" class="btn btn-sm btn-outline-info py-0" style="font-size: 11px;">🔗 PNCP</a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
 
             </div>
@@ -291,7 +336,6 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
     <script src="js/app.js"></script>
 </body>
 </html>

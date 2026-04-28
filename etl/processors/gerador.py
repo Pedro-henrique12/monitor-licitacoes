@@ -68,61 +68,76 @@ def gerar_dados_mercado():
         print(f"✅ alertas.json gerado na pasta data/output/.")
     except Exception as e: print(f"Erro nos alertas: {e}")
 
-    # --- 3. RADAR COMERCIAL (ÓRGÃOS INDIVIDUALIZADOS POR CNPJ) ---    
-    print("Gerando dados do Radar Comercial...")
+print("Gerando dados do Radar Comercial...")
     
     query_radar = """
     SELECT 
         r.uf AS Estado,
         r.cidade_norm AS Municipio,
-        
-        -- Pega o nome mais recente usado por ESTE CNPJ específico
         SUBSTRING_INDEX(MAX(CONCAT(r.data_publicacao, '||', r.nome_orgao)), '||', -1) AS Orgao,
-        
         MAX(r.data_publicacao) AS Ultima_Publicacao,
         TIMESTAMPDIFF(MONTH, MAX(r.data_publicacao), CURDATE()) AS Meses_Inativo,
-        
-        -- Pega a última plataforma usada por ESTE CNPJ específico
         SUBSTRING_INDEX(MAX(CONCAT(r.data_publicacao, '||', r.sistema_fonte)), '||', -1) AS Plataforma,
-        
-        -- Traz o CNPJ Completo para o seu vendedor saber exatamente quem é
         SUBSTRING_INDEX(r.id_pncp, '-', 1) AS CNPJ,
-        
-        -- NOVA LINHA: Traz o ID_PNCP atrelado à data mais recente para o botão do frontend
         SUBSTRING_INDEX(MAX(CONCAT(r.data_publicacao, '||', r.id_pncp)), '||', -1) AS Ultimo_ID_PNCP
-        
     FROM licitacoes_raw r
     WHERE r.id_pncp IS NOT NULL AND r.id_pncp LIKE '%%-%%'
-    
-    -- Correção do ONLY_FULL_GROUP_BY incluída e mantida
     GROUP BY 
         r.uf,
         r.cidade_norm,
         SUBSTRING_INDEX(r.id_pncp, '-', 1)
-        
     HAVING Meses_Inativo >= 2
     ORDER BY Meses_Inativo DESC, r.uf ASC, r.cidade_norm ASC
     """
 
     try:
-        # A conexão 'engine' agora funciona porque estamos dentro da função principal!
         df_radar = pd.read_sql(query_radar, engine)
-        
         if not df_radar.empty:
             df_radar['Ultima_Publicacao'] = pd.to_datetime(df_radar['Ultima_Publicacao']).dt.strftime('%d/%m/%Y')
-            
         path_radar = os.path.join(OUTPUT_DIR, 'radar.json')
-        
         with open(path_radar, 'w', encoding='utf-8') as f:
             json.dump(df_radar.to_dict(orient='records'), f, ensure_ascii=False)
-            
         print(f"✅ radar.json gerado na pasta data/output/ com {len(df_radar)} registros individuais.")
-        
     except Exception as e: 
         print(f"❌ Erro no radar: {e}")
 
+    # ====================================================================
+    # 📜 INÍCIO DO BLOCO DO HISTÓRICO (Últimas 10 de cada órgão)
+    # ====================================================================
+    print("Gerando dados de Histórico...")
+    
+    query_historico = """
+    WITH Ranked AS (
+        SELECT 
+            uf, 
+            cidade_norm AS municipio, 
+            nome_orgao AS orgao, 
+            data_publicacao, 
+            sistema_fonte AS plataforma, 
+            id_pncp,
+            ROW_NUMBER() OVER(PARTITION BY uf, cidade_norm, nome_orgao ORDER BY data_publicacao DESC) as rn
+        FROM licitacoes_raw
+        WHERE id_pncp IS NOT NULL
+    )
+    SELECT uf, municipio, orgao, data_publicacao, plataforma, id_pncp 
+    FROM Ranked 
+    WHERE rn <= 10
+    """
+
+    try:
+        df_hist = pd.read_sql(query_historico, engine)
+        if not df_hist.empty:
+            df_hist['data_publicacao'] = pd.to_datetime(df_hist['data_publicacao']).dt.strftime('%d/%m/%Y')
+            
+        path_hist = os.path.join(OUTPUT_DIR, 'historico.json')
+        with open(path_hist, 'w', encoding='utf-8') as f:
+            json.dump(df_hist.to_dict(orient='records'), f, ensure_ascii=False)
+        print(f"✅ historico.json gerado na pasta data/output/ com {len(df_hist)} registros.")
+    except Exception as e: 
+        print(f"❌ Erro no histórico: {e}")
+
 # ====================================================================
-# FIM DO ARQUIVO (FORA DA FUNÇÃO, COLADO NA MARGEM ESQUERDA)
+# FIM DO ARQUIVO
 # ====================================================================
 if __name__ == "__main__":
     gerar_dados_mercado()

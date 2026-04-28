@@ -7,7 +7,7 @@ const CORES_SISTEMAS = {
     "Licitar Digital": "#008000", "Licita Mais": "#32CD32", "Conlicitacao": "#2E8B57",
     "Portal de Compras Públicas": "#8A2BE2", "Start Gov": "#8B4513",
     "Sem Dados no PNCP": "#444444", // Escureci o Sem Dados para combinar
-    "Outros": "#A9A9A9"   
+    "Outros": "#A9A9A9"    
 };
 
 Chart.defaults.color = '#a0aabf';
@@ -17,6 +17,7 @@ createApp({
         return {
             abaAtiva: 'mapa', 
             dadosMercado: [], dadosFiltrados: [], alertas: [], alertasFiltrados: [], geoJsonDados: null,
+            dadosHistorico: [], // Guarda o histórico de licitações
             mapa: null, camadaGeoJson: null, camadaEstados: null, geoJsonEstados: null, graficoPlat: null, graficoConc: null,
             ufsSelecionadas: ['Todos'], cidadeSelecionada: 'Todos', buscaCidade: '', 
             listaUFs: [], listaCidades: [], coresSistemas: CORES_SISTEMAS,
@@ -58,6 +59,23 @@ createApp({
         },
         totalPaginasRadar() {
             return Math.ceil(this.dadosRadarFiltrados.length / this.itensPorPagina) || 1;
+        },
+        historicoFiltrado() {
+            // Se não houver exata 1 cidade de 1 estado selecionada, retorna vazio
+            if (this.cidadeSelecionada === 'Todos' || this.ufsSelecionadas.includes('Todos') || this.ufsSelecionadas.length > 1) {
+                return {}; 
+            }
+            
+            // Filtra o JSON de histórico para pegar apenas a cidade atual
+            const dadosCidade = this.dadosHistorico.filter(h => h.uf === this.ufsSelecionadas[0] && h.municipio === this.cidadeSelecionada);
+            
+            // Agrupa os dados pelo nome do órgão
+            const agrupado = {};
+            dadosCidade.forEach(item => {
+                if (!agrupado[item.orgao]) agrupado[item.orgao] = [];
+                agrupado[item.orgao].push(item);
+            });
+            return agrupado;
         }
     },
     async mounted() {
@@ -89,11 +107,13 @@ createApp({
                     this.listaPlataformasRadar = plats.sort();
                 }
 
-                const [resAlertas, resDados, resGeo, resEstados] = await Promise.all([
+                // Adicionado o historico.json na busca simultânea
+                const [resAlertas, resDados, resGeo, resEstados, resHist] = await Promise.all([
                     fetch('../data/output/alertas.json'), 
                     fetch('../data/output/dados_mercado.json'), 
                     fetch('../data/geo/municipios_ibge.json/geojs-100-mun.json'),
-                    fetch('https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson')
+                    fetch('https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson'),
+                    fetch('../data/output/historico.json')
                 ]);
                 
                 if (resAlertas.ok) {
@@ -104,7 +124,6 @@ createApp({
                 
                 if (resGeo.ok) {
                     this.geoJsonDados = markRaw(await resGeo.json());
-                    console.log("✅ MAPA CARREGADO: ", this.geoJsonDados.features.length, " cidades.");
                 } else {
                     console.error("❌ Erro ao carregar o arquivo do mapa.");
                 }
@@ -112,6 +131,10 @@ createApp({
                 if (resEstados.ok) {
                     this.geoJsonEstados = markRaw(await resEstados.json());
                     this.renderizarEstados();
+                }
+
+                if (resHist && resHist.ok) {
+                    this.dadosHistorico = await resHist.json();
                 }
 
                 this.prepararFiltros();
@@ -208,7 +231,6 @@ createApp({
 
             this.camadaGeoJson = markRaw(L.geoJSON(this.geoJsonDados, {
                 style: (feature) => {
-                    // Tenta ler o ID de vários lugares comuns no GeoJSON
                     const rawId = feature.id || feature.properties.id || feature.properties.cod_ibge || feature.properties.GEOCODIGO;
                     const cod6 = String(rawId).substring(0,6);
                     const dadosCidade = mapDados[cod6];
