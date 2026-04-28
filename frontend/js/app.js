@@ -7,7 +7,7 @@ const CORES_SISTEMAS = {
     "Licitar Digital": "#008000", "Licita Mais": "#32CD32", "Conlicitacao": "#2E8B57",
     "Portal de Compras Públicas": "#8A2BE2", "Start Gov": "#8B4513",
     "Sem Dados no PNCP": "#444444", // Escureci o Sem Dados para combinar
-    "Outros": "#A9A9A9"  
+    "Outros": "#A9A9A9"   
 };
 
 Chart.defaults.color = '#a0aabf';
@@ -18,13 +18,8 @@ createApp({
             abaAtiva: 'mapa', 
             dadosMercado: [], dadosFiltrados: [], alertas: [], alertasFiltrados: [], geoJsonDados: null,
             mapa: null, camadaGeoJson: null, camadaEstados: null, geoJsonEstados: null, graficoPlat: null, graficoConc: null,
-            
-            ufsSelecionadas: ['Todos'], 
-            cidadeSelecionada: 'Todos', 
-            buscaCidade: '', 
-            
+            ufsSelecionadas: ['Todos'], cidadeSelecionada: 'Todos', buscaCidade: '', 
             listaUFs: [], listaCidades: [], coresSistemas: CORES_SISTEMAS,
-            
             dadosRadar: [], dadosRadarFiltrados: [], radarTipoOrgao: 'Todos', radarMeses: 2, radarPlataforma: 'Todas', listaPlataformasRadar: [],
             alertasExpandidos: false, paginaAtualRadar: 1, itensPorPagina: 50
         }
@@ -87,19 +82,17 @@ createApp({
         
         async carregarArquivos() {
             try {
-                try {
-                    const resRadar = await fetch('../data/output/radar.json');
-                    if (resRadar.ok) {
-                        this.dadosRadar = await resRadar.json();
-                        const plats = [...new Set(this.dadosRadar.map(item => item.Plataforma).filter(Boolean))];
-                        this.listaPlataformasRadar = plats.sort();
-                    }
-                } catch (e) { console.log("Radar pendente."); }
+                const resRadar = await fetch('../data/output/radar.json');
+                if (resRadar.ok) {
+                    this.dadosRadar = await resRadar.json();
+                    const plats = [...new Set(this.dadosRadar.map(item => item.Plataforma).filter(Boolean))];
+                    this.listaPlataformasRadar = plats.sort();
+                }
 
                 const [resAlertas, resDados, resGeo, resEstados] = await Promise.all([
                     fetch('../data/output/alertas.json'), 
                     fetch('../data/output/dados_mercado.json'), 
-                    fetch('../data/geo/municipios_ibge.json/geojs-100-mun.json'), // <--- CAMINHO CORRIGIDO AQUI
+                    fetch('../data/geo/municipios_ibge.json/geojs-100-mun.json'),
                     fetch('https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson')
                 ]);
                 
@@ -108,7 +101,13 @@ createApp({
                     this.alertasFiltrados = this.alertas; 
                 }
                 if (resDados.ok) this.dadosMercado = await resDados.json();
-                if (resGeo.ok) this.geoJsonDados = markRaw(await resGeo.json());
+                
+                if (resGeo.ok) {
+                    this.geoJsonDados = markRaw(await resGeo.json());
+                    console.log("✅ MAPA CARREGADO: ", this.geoJsonDados.features.length, " cidades.");
+                } else {
+                    console.error("❌ Erro ao carregar o arquivo do mapa.");
+                }
                 
                 if (resEstados.ok) {
                     this.geoJsonEstados = markRaw(await resEstados.json());
@@ -117,8 +116,7 @@ createApp({
 
                 this.prepararFiltros();
                 this.filtrarDados(); 
-                this.filtrarRadar();
-            } catch (erro) { console.error("Erro:", erro); }
+            } catch (erro) { console.error("Erro geral no carregamento:", erro); }
         },
 
         prepararFiltros() {
@@ -128,22 +126,16 @@ createApp({
 
         tratarSelecaoUFs(clicado) {
             if (clicado === 'Todos') {
-                if (this.ufsSelecionadas.includes('Todos')) {
-                    this.ufsSelecionadas = ['Todos'];
-                } else {
-                    if (this.ufsSelecionadas.length === 0) this.ufsSelecionadas = ['Todos'];
-                }
+                this.ufsSelecionadas = this.ufsSelecionadas.includes('Todos') ? ['Todos'] : (this.ufsSelecionadas.length === 0 ? ['Todos'] : this.ufsSelecionadas);
             } else {
                 const index = this.ufsSelecionadas.indexOf('Todos');
                 if (index > -1) this.ufsSelecionadas.splice(index, 1);
                 if (this.ufsSelecionadas.length === 0) this.ufsSelecionadas = ['Todos'];
             }
-
             if (this.ufsSelecionadas.includes('Todos') || this.ufsSelecionadas.length > 1) {
                 this.cidadeSelecionada = 'Todos'; 
                 this.buscaCidade = ''; 
             }
-
             this.filtrarDados();
         },
 
@@ -162,18 +154,15 @@ createApp({
                 this.dadosFiltrados = this.dadosMercado.filter(item => this.ufsSelecionadas.includes(item.uf));
                 const cidades = [...new Set(this.dadosFiltrados.map(item => item.cidade_norm).filter(Boolean))];
                 this.listaCidades = cidades.sort();
-                
                 if (this.cidadeSelecionada !== 'Todos') {
                     this.dadosFiltrados = this.dadosFiltrados.filter(item => item.cidade_norm === this.cidadeSelecionada);
                 }
             }
-
             this.alertasFiltrados = this.alertas.filter(alerta => {
                 let bateUf = this.ufsSelecionadas.includes('Todos') || this.ufsSelecionadas.includes(alerta.uf);
                 let bateCidade = (this.cidadeSelecionada === 'Todos') || (alerta.cidade_norm === this.cidadeSelecionada);
                 return bateUf && bateCidade;
             });
-
             if (this.abaAtiva === 'mapa') this.renderizarPoligonos();
             if (this.abaAtiva === 'dashboards') this.atualizarDashboards();
             this.filtrarRadar(); 
@@ -181,13 +170,8 @@ createApp({
 
         filtrarRadar() {
             let filtrados = this.dadosRadar || [];
-            
-            if (!this.ufsSelecionadas.includes('Todos')) {
-                filtrados = filtrados.filter(d => this.ufsSelecionadas.includes(d.Estado));
-            }
-
+            if (!this.ufsSelecionadas.includes('Todos')) filtrados = filtrados.filter(d => this.ufsSelecionadas.includes(d.Estado));
             if (this.radarPlataforma !== 'Todas') filtrados = filtrados.filter(d => d.Plataforma === this.radarPlataforma);
-            
             filtrados = filtrados.filter(d => d.Meses_Inativo >= this.radarMeses);
 
             if (this.radarTipoOrgao === "Prefeitura/Município") {
@@ -199,7 +183,6 @@ createApp({
             } else if (this.radarTipoOrgao === "Outros") {
                 filtrados = filtrados.filter(d => !/PREFEITURA|MUNICÍPIO|MUNICIPIO/i.test(d.Orgao) && !/CÂMARA|CAMARA/i.test(d.Orgao) && !/FUNDO|SECRETARIA|SAÚDE|SAUDE|ASSISTÊNCIA|ASSISTENCIA|EDUCAÇÃO|EDUCACAO/i.test(d.Orgao));
             }
-            
             this.dadosRadarFiltrados = filtrados;
             this.paginaAtualRadar = 1; 
         },
@@ -216,26 +199,36 @@ createApp({
             if (this.camadaGeoJson) this.mapa.removeLayer(this.camadaGeoJson);
 
             const mapDados = {};
-            this.dadosFiltrados.forEach(d => { if(d.cod_ibge) mapDados[d.cod_ibge.substring(0,6)] = d; });
-
-            const estiloPoligono = (feature) => {
-                const codIbgeFeature = String(feature.properties.id || feature.id).substring(0,6);
-                const dadosCidade = mapDados[codIbgeFeature];
-                let cor = CORES_SISTEMAS["Sem Dados no PNCP"];
-                if (dadosCidade && CORES_SISTEMAS[dadosCidade.sistema_fonte]) cor = CORES_SISTEMAS[dadosCidade.sistema_fonte];
-                
-                return { fillColor: cor, weight: 0.5, color: '#111', opacity: 0.8, fillOpacity: 0.9 };
-            };
+            this.dadosFiltrados.forEach(d => { 
+                if(d.cod_ibge) {
+                    const id6 = String(d.cod_ibge).substring(0,6);
+                    mapDados[id6] = d; 
+                }
+            });
 
             this.camadaGeoJson = markRaw(L.geoJSON(this.geoJsonDados, {
-                style: estiloPoligono,
+                style: (feature) => {
+                    // Tenta ler o ID de vários lugares comuns no GeoJSON
+                    const rawId = feature.id || feature.properties.id || feature.properties.cod_ibge || feature.properties.GEOCODIGO;
+                    const cod6 = String(rawId).substring(0,6);
+                    const dadosCidade = mapDados[cod6];
+                    
+                    let cor = CORES_SISTEMAS["Sem Dados no PNCP"];
+                    if (dadosCidade && CORES_SISTEMAS[dadosCidade.sistema_fonte]) {
+                        cor = CORES_SISTEMAS[dadosCidade.sistema_fonte];
+                    }
+                    
+                    return { fillColor: cor, weight: 0.5, color: '#111', opacity: 0.8, fillOpacity: 0.9 };
+                },
                 onEachFeature: (feature, layer) => {
-                    const codIbgeFeature = String(feature.properties.id || feature.id).substring(0,6);
-                    const dadosCidade = mapDados[codIbgeFeature];
+                    const rawId = feature.id || feature.properties.id || feature.properties.cod_ibge || feature.properties.GEOCODIGO;
+                    const cod6 = String(rawId).substring(0,6);
+                    const dadosCidade = mapDados[cod6];
+                    
                     if (dadosCidade) {
-                        layer.bindPopup(`<div style="color: #222;"><h6 style="margin-bottom: 2px;"><b>${dadosCidade.cidade_norm} - ${dadosCidade.uf}</b></h6>Plataforma: <b>${dadosCidade.sistema_fonte}</b><br>Status: ${dadosCidade.status_municipio}</div>`);
+                        layer.bindPopup(`<div style="color: #222;"><b>${dadosCidade.cidade_norm} - ${dadosCidade.uf}</b><br>Plataforma: <b>${dadosCidade.sistema_fonte}</b><br>Status: ${dadosCidade.status_municipio}</div>`);
                     } else {
-                        layer.bindPopup(`<div style="color: #222;"><b>${feature.properties.name || 'Cidade'}</b><br>Sem Dados no PNCP</div>`);
+                        layer.bindPopup(`<div style="color: #222;"><b>${feature.properties.name || 'Município'}</b><br>Sem Dados no PNCP</div>`);
                     }
                 }
             })).addTo(this.mapa);
@@ -243,41 +236,32 @@ createApp({
             if (!this.ufsSelecionadas.includes('Todos') && this.camadaGeoJson.getBounds().isValid()) {
                 this.mapa.fitBounds(this.camadaGeoJson.getBounds());
             }
-
             if (this.camadaEstados) this.camadaEstados.bringToFront();
         },
 
         atualizarDashboards() {
             if (!document.getElementById('chartPlataformas')) return;
-
             const platReais = this.dadosFiltrados.filter(d => d.sistema_fonte && d.sistema_fonte !== 'Sem Dados no PNCP');
             const contaPlat = {};
             platReais.forEach(d => { contaPlat[d.sistema_fonte] = (contaPlat[d.sistema_fonte] || 0) + 1; });
-            
             const labelsPlat = Object.keys(contaPlat).sort((a,b) => contaPlat[b] - contaPlat[a]).slice(0, 10);
             const dataPlat = labelsPlat.map(l => contaPlat[l]);
             const coresPlat = labelsPlat.map(l => this.coresSistemas[l] || this.coresSistemas['Outros']);
-
             if (this.graficoPlat) this.graficoPlat.destroy(); 
-            
             const ctx1 = document.getElementById('chartPlataformas').getContext('2d');
             this.graficoPlat = markRaw(new Chart(ctx1, {
                 type: 'doughnut', 
                 data: { labels: labelsPlat, datasets: [{ data: dataPlat, backgroundColor: coresPlat, borderWidth: 2, borderColor: '#1e1e2d' }] },
                 options: { maintainAspectRatio: false, cutout: '60%', plugins: { legend: { position: 'right', labels: { boxWidth: 12 } } } }
             }));
-
             const concReais = this.dadosFiltrados.filter(d => d.status_municipio && d.status_municipio !== 'Sem Registro');
             const contaConc = {};
             concReais.forEach(d => { contaConc[d.status_municipio] = (contaConc[d.status_municipio] || 0) + 1; });
-
             const labelsConc = Object.keys(contaConc);
             const dataConc = labelsConc.map(l => contaConc[l]);
             const coresStatus = { 'Exclusivo': '#2E8B57', 'Compartilhado': '#4682B4' };
             const coresConc = labelsConc.map(l => coresStatus[l] || '#A9A9A9');
-
             if (this.graficoConc) this.graficoConc.destroy();
-            
             const ctx2 = document.getElementById('chartConcorrencia').getContext('2d');
             this.graficoConc = markRaw(new Chart(ctx2, {
                 type: 'pie', 
@@ -287,28 +271,23 @@ createApp({
         },
 
         baixarRelatorioRadar() {
-            if (this.dadosRadarFiltrados.length === 0) { alert("Não há alvos para exportar."); return; }
+            if (this.dadosRadarFiltrados.length === 0) return;
             const ws = XLSX.utils.json_to_sheet(this.dadosRadarFiltrados);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Alvos");
-            
-            let nomeFiltro = this.ufsSelecionadas.includes('Todos') ? 'Brasil' : (this.ufsSelecionadas.length > 3 ? 'Varios_Estados' : this.ufsSelecionadas.join('-'));
-            XLSX.writeFile(wb, `Alvos_Comerciais_${nomeFiltro}.xlsx`);
+            XLSX.writeFile(wb, `Alvos_Comerciais.xlsx`);
         },
         
         baixarRelatorio() {
-            if (this.dadosFiltrados.length === 0) { alert("Não há dados na tela para exportar."); return; }
+            if (this.dadosFiltrados.length === 0) return;
             const dadosExcel = this.dadosFiltrados.map(d => ({
                 'UF': d.uf || '', 'Município': d.cidade_norm || '', 'Plataforma': d.sistema_fonte || 'Sem Dados no PNCP',
-                'Status': d.status_municipio || 'Sem Registro', 'Detalhamento': d.resumo_disputa || 'Nenhuma licitação encontrada no PNCP.'
+                'Status': d.status_municipio || 'Sem Registro'
             }));
             const ws = XLSX.utils.json_to_sheet(dadosExcel);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Relatório");
-            
-            let nomeFiltro = this.ufsSelecionadas.includes('Todos') ? '_Brasil' : (this.ufsSelecionadas.length > 3 ? '_Varios_Estados' : '_' + this.ufsSelecionadas.join('-'));
-            if (this.cidadeSelecionada && this.cidadeSelecionada !== 'Todos') nomeFiltro += `_${this.cidadeSelecionada}`;
-            XLSX.writeFile(wb, `Relatorio_Mercado${nomeFiltro}.xlsx`);
+            XLSX.writeFile(wb, `Relatorio_Mercado.xlsx`);
         },
 
         gerarLinkPNCP(id_pncp) {
@@ -318,18 +297,14 @@ createApp({
                 if (partesBarra.length !== 2) return '#';
                 const ano = partesBarra[1]; 
                 const partesHifen = partesBarra[0].split('-');
-                if (partesHifen.length < 3) return '#';
                 const cnpj = partesHifen[0]; 
                 const numeroStr = partesHifen[partesHifen.length - 1]; 
                 const numero = parseInt(numeroStr, 10); 
                 return `https://pncp.gov.br/app/editais/${cnpj}/${ano}/${numero}`;
             } catch (e) { return '#'; }
         },
-
         abrirModalAlertas() { this.alertasExpandidos = true; },
         fecharModalAlertas() { this.alertasExpandidos = false; },
-        mudarPagina(p) {
-            if (p >= 1 && p <= this.totalPaginasRadar) this.paginaAtualRadar = p;
-        }
+        mudarPagina(p) { if (p >= 1 && p <= this.totalPaginasRadar) this.paginaAtualRadar = p; }
     }
 }).mount('#app');
