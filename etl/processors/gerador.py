@@ -68,14 +68,8 @@ def gerar_dados_mercado():
         print(f"✅ alertas.json gerado na pasta data/output/.")
     except Exception as e: print(f"Erro nos alertas: {e}")
 
-    print("Gerando dados do Radar Comercial...")
+        print("Gerando dados do Radar...")
     
-# ... (suas configurações de banco e geração da vw_mapa_final ficam aqui) ...
-
-    # ====================================================================
-    # 🎯 BLOCO DO RADAR COMERCIAL
-    # ====================================================================
-    print("Gerando dados do Radar Comercial...")
     
     query_radar = """
     SELECT 
