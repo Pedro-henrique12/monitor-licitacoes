@@ -5,20 +5,12 @@ import os
 from dotenv import load_dotenv
 
 # --- LÓGICA DE CAMINHOS DINÂMICOS ---
-# Pega a pasta onde o gerador.py está (etl/processors) e sobe duas para a raiz do projeto
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-# Define as pastas exatas
 CONFIG_PATH = os.path.join(BASE_DIR, 'config', '.env')
 OUTPUT_DIR = os.path.join(BASE_DIR, 'data', 'output')
 
-# Garante que a pasta de saída exista
 os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-# Abre o arquivo de configuração (.env) lá na pasta config
 load_dotenv(CONFIG_PATH)
-
-# Puxa a string de conexão segura do MySQL
 MYSQL_STR = os.getenv("MYSQL_STR")
 
 def gerar_dados_mercado():
@@ -27,18 +19,21 @@ def gerar_dados_mercado():
     
     # --- 1. DADOS DO MAPA ---
     print("Lendo view principal (vw_mapa_final)...")
-    df_mapa = pd.read_sql("SELECT * FROM vw_mapa_final", engine)
-    if not df_mapa.empty:
-        df_mapa['cod_ibge'] = df_mapa['cod_ibge'].astype(str).str.strip().apply(lambda x: x.split('.')[0])
-        df_mapa.rename(columns={'cidade': 'cidade_norm', 'vencedor': 'sistema_fonte', 'status_concorrencia': 'status_municipio'}, inplace=True)
-        df_mapa['sistema_fonte'] = df_mapa['sistema_fonte'].fillna('Sem Dados no PNCP')
-        df_mapa['status_municipio'] = df_mapa['status_municipio'].fillna('Sem Registro')
-        df_mapa['resumo_disputa'] = df_mapa['resumo_disputa'].fillna('Nenhuma licitação encontrada.')
-        
-        path_mercado = os.path.join(OUTPUT_DIR, 'dados_mercado.json')
-        with open(path_mercado, 'w', encoding='utf-8') as f:
-            json.dump(df_mapa.to_dict(orient='records'), f, ensure_ascii=False)
-        print(f"✅ dados_mercado.json gerado na pasta data/output/.")
+    try:
+        df_mapa = pd.read_sql("SELECT * FROM vw_mapa_final", engine)
+        if not df_mapa.empty:
+            df_mapa['cod_ibge'] = df_mapa['cod_ibge'].astype(str).str.strip().apply(lambda x: x.split('.')[0])
+            df_mapa.rename(columns={'cidade': 'cidade_norm', 'vencedor': 'sistema_fonte', 'status_concorrencia': 'status_municipio'}, inplace=True)
+            df_mapa['sistema_fonte'] = df_mapa['sistema_fonte'].fillna('Sem Dados no PNCP')
+            df_mapa['status_municipio'] = df_mapa['status_municipio'].fillna('Sem Registro')
+            df_mapa['resumo_disputa'] = df_mapa['resumo_disputa'].fillna('Nenhuma licitação encontrada.')
+            
+            path_mercado = os.path.join(OUTPUT_DIR, 'dados_mercado.json')
+            with open(path_mercado, 'w', encoding='utf-8') as f:
+                json.dump(df_mapa.to_dict(orient='records'), f, ensure_ascii=False)
+            print(f"✅ dados_mercado.json gerado na pasta data/output/.")
+    except Exception as e:
+        print(f"❌ Erro no mapa: {e}")
 
     # --- 2. ALERTAS DE CONCORRÊNCIA ---
     print("Buscando alertas de concorrência...")
@@ -66,11 +61,11 @@ def gerar_dados_mercado():
         with open(path_alertas, 'w', encoding='utf-8') as f:
             json.dump(df_alertas.to_dict(orient='records'), f, ensure_ascii=False)
         print(f"✅ alertas.json gerado na pasta data/output/.")
-    except Exception as e: print(f"Erro nos alertas: {e}")
+    except Exception as e: 
+        print(f"❌ Erro nos alertas: {e}")
 
-        print("Gerando dados do Radar...")
-    
-    
+    # --- 3. RADAR COMERCIAL ---
+    print("Gerando dados do Radar...")
     query_radar = """
     SELECT 
         r.uf AS Estado,
@@ -90,7 +85,6 @@ def gerar_dados_mercado():
     HAVING Meses_Inativo >= 2
     ORDER BY Meses_Inativo DESC, r.uf ASC, r.cidade_norm ASC
     """
-
     try:
         df_radar = pd.read_sql(query_radar, engine)
         if not df_radar.empty:
@@ -102,9 +96,8 @@ def gerar_dados_mercado():
     except Exception as e: 
         print(f"❌ Erro no radar: {e}")
 
-
-        print("Gerando dados de Histórico...")
-    
+    # --- 4. HISTÓRICO ---
+    print("Gerando dados de Histórico...")
     query_historico = """
     WITH Ranked AS (
         SELECT 
@@ -122,7 +115,6 @@ def gerar_dados_mercado():
     FROM Ranked 
     WHERE rn <= 10
     """
-
     try:
         df_hist = pd.read_sql(query_historico, engine)
         if not df_hist.empty:
