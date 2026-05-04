@@ -307,6 +307,7 @@
                                 <thead class="text-muted small">
                                     <tr>
                                         <th class="ps-3">Data da Publicação</th>
+                                        <th>Modalidade</th>
                                         <th>Plataforma Utilizada</th>
                                         <th class="text-end pe-3">Edital</th>
                                     </tr>
@@ -314,6 +315,7 @@
                                 <tbody>
                                     <tr v-for="lic in licitacoes" :key="lic.id_pncp">
                                         <td class="ps-3 text-light">{{ lic.data_publicacao }}</td>
+                                        <td class="text-light fw-semibold" style="font-size: 11px;">{{ lic.modalidade || 'Não informada' }}</td>
                                         <td>
                                             <span class="badge" :style="{ backgroundColor: coresSistemas[lic.plataforma] || coresSistemas['Outros'] }">
                                                 {{ lic.plataforma }}
