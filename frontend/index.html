@@ -59,16 +59,16 @@
                 <div class="collapse navbar-collapse">
                     <ul class="navbar-nav ms-auto">
                         <li class="nav-item">
-                            <a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'mapa' }" @click="abaAtiva = 'mapa'" href="#">🗺️ Mapa</a>
+                            <a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'mapa' }" @click.prevent="mudarAba('mapa')" href="#">🗺️ Mapa</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'dashboards' }" @click="abaAtiva = 'dashboards'; atualizarDashboards();" href="#">📈 Dashboards</a>
+                            <a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'dashboards' }" @click.prevent="mudarAba('dashboards')" href="#">📈 Dashboards</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'radar' }" @click="abaAtiva = 'radar'" href="#">🎯 Radar</a>
+                            <a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'radar' }" @click.prevent="mudarAba('radar')" href="#">🎯 Radar</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'historico' }" @click="abaAtiva = 'historico'" href="#">📜 Histórico</a>
+                            <a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'historico' }" @click.prevent="mudarAba('historico')" href="#">📜 Histórico</a>
                         </li>
                     </ul>
                 </div>
