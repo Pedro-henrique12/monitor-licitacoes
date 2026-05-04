@@ -35,17 +35,25 @@ def gerar_dados_mercado():
         print(f"❌ Erro no mapa: {e}")
 
     # --- 2. ALERTAS DE CONCORRÊNCIA ---
-    print("Buscando alertas de concorrência...")
+    print("Buscando alertas de concorrência (Filtrado por CNPJ)...")
     query_alertas = """
     SELECT DISTINCT r.cidade_norm, r.uf, r.sistema_fonte AS sistema_concorrente, r.id_pncp, r.data_publicacao, r.nome_orgao
     FROM licitacoes_raw r
     WHERE r.sistema_fonte NOT IN ('Licitanet', 'Outros', 'Sem Dados no PNCP')
       AND r.data_publicacao >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+      AND r.id_pncp IS NOT NULL
+      
+      -- Filtro para garantir que estamos olhando para as Prefeituras
       AND (r.nome_orgao LIKE '%%PREFEITURA%%' OR r.nome_orgao LIKE '%%MUNICIPIO%%')
+      AND r.nome_orgao NOT LIKE '%%AUTARQUIA%%' AND r.nome_orgao NOT LIKE '%%FUNDO%%' AND r.nome_orgao NOT LIKE '%%CAMARA%%'
+      AND r.nome_orgao NOT LIKE '%%SECRETARIA%%' AND r.nome_orgao NOT LIKE '%%SAUDE%%' AND r.nome_orgao NOT LIKE '%%AGUA%%' 
+      
+      -- A CHAVE DE OURO: Garante que O MESMO CNPJ já publicou na Licitanet nos últimos 12 meses
       AND EXISTS (
           SELECT 1 FROM licitacoes_raw l 
-          WHERE l.cidade_norm = r.cidade_norm AND l.uf = r.uf AND l.sistema_fonte = 'Licitanet'
-            AND l.data_publicacao >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+          WHERE SUBSTRING_INDEX(l.id_pncp, '-', 1) = SUBSTRING_INDEX(r.id_pncp, '-', 1)
+            AND l.sistema_fonte = 'Licitanet'
+            AND l.data_publicacao >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
       )
     ORDER BY r.data_publicacao DESC
     """
@@ -61,7 +69,6 @@ def gerar_dados_mercado():
 
     # --- 3. RADAR COMERCIAL ---
     print("Gerando dados do Radar...")
-    print("Gerando dados do Radar Comercial...") 
     query_radar = """
     SELECT 
         r.uf AS Estado,
@@ -74,14 +81,10 @@ def gerar_dados_mercado():
         SUBSTRING_INDEX(MAX(CONCAT(r.data_publicacao, '||', r.id_pncp)), '||', -1) AS Ultimo_ID_PNCP
     FROM licitacoes_raw r
     WHERE r.id_pncp IS NOT NULL AND r.id_pncp LIKE '%%-%%'
-    GROUP BY 
-        r.uf,
-        r.cidade_norm,
-        SUBSTRING_INDEX(r.id_pncp, '-', 1)
+    GROUP BY r.uf, r.cidade_norm, SUBSTRING_INDEX(r.id_pncp, '-', 1)
     HAVING Meses_Inativo >= 2
     ORDER BY Meses_Inativo DESC, r.uf ASC, r.cidade_norm ASC
     """
-
     try:
         df_radar = pd.read_sql(query_radar, engine)
         if not df_radar.empty:
@@ -89,15 +92,12 @@ def gerar_dados_mercado():
         path_radar = os.path.join(OUTPUT_DIR, 'radar.json')
         with open(path_radar, 'w', encoding='utf-8') as f:
             json.dump(df_radar.to_dict(orient='records'), f, ensure_ascii=False)
-        print(f"✅ radar.json gerado na pasta data/output/ com {len(df_radar)} registros individuais.")
+        print(f"✅ radar.json gerado.")
     except Exception as e: 
         print(f"❌ Erro no radar: {e}")
 
-    # ====================================================================
-    # 📜 INÍCIO DO BLOCO DO HISTÓRICO (Últimas 10 de cada órgão)
-    # ====================================================================
+    # --- 4. HISTÓRICO ---
     print("Gerando dados de Histórico...")
-    
     query_historico = """
     WITH Ranked AS (
         SELECT 
@@ -115,21 +115,16 @@ def gerar_dados_mercado():
     FROM Ranked 
     WHERE rn <= 10
     """
-
     try:
         df_hist = pd.read_sql(query_historico, engine)
         if not df_hist.empty:
             df_hist['data_publicacao'] = pd.to_datetime(df_hist['data_publicacao']).dt.strftime('%d/%m/%Y')
-            
         path_hist = os.path.join(OUTPUT_DIR, 'historico.json')
         with open(path_hist, 'w', encoding='utf-8') as f:
             json.dump(df_hist.to_dict(orient='records'), f, ensure_ascii=False)
-        print(f"✅ historico.json gerado na pasta data/output/ com {len(df_hist)} registros.")
+        print(f"✅ historico.json gerado.")
     except Exception as e: 
         print(f"❌ Erro no histórico: {e}")
 
-# ====================================================================
-# FIM DO ARQUIVO
-# ====================================================================
 if __name__ == "__main__":
     gerar_dados_mercado()
