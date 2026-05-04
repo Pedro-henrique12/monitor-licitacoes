@@ -3,324 +3,220 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitor de Licitações</title>
+    <title>Monitor de Licitações | Licitanet</title>
+    
+    <!-- Bloqueio de Segurança Simples -->
     <script>
         const SENHA_CORRETA = "TESTE#2026"; 
         let tentativa = prompt("Acesso Restrito. Digite a senha do Radar:");
         if (tentativa !== SENHA_CORRETA) {
-            alert("Senha incorreta! Você será redirecionado.");
+            alert("Senha incorreta!");
             window.location.href = "https://www.google.com"; 
             document.write("<style>body { display:none !important; }</style>");
             window.stop();
         }
     </script>
+
+    <!-- CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="css/style.css">
+    
+    <!-- Bibliotecas Externas -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="bg-dark text-light position-relative">
+<body class="bg-dark text-light">
 
     <div id="app" class="d-flex flex-column vh-100" v-cloak>
         
+        <!-- MODAL DE ALERTAS (EXPANDIDO) -->
         <div v-if="alertasExpandidos" class="position-absolute top-0 start-0 w-100 h-100 z-3 d-flex justify-content-center align-items-start p-4" style="background: rgba(0,0,0,0.8); backdrop-filter: blur(4px);">
             <div class="card bg-dark-main w-75 shadow-lg border border-danger">
                 <div class="card-header d-flex justify-content-between align-items-center bg-danger text-white border-0">
-                    <h5 class="mb-0 fw-bold">🚨 Relatório Completo de Alertas ({{ alertasFiltrados.length }})</h5>
+                    <h5 class="mb-0 fw-bold">🚨 Alertas de Churn ({{ alertasFiltrados.length }})</h5>
                     <button class="btn-close btn-close-white" @click="fecharModalAlertas"></button>
                 </div>
                 <div class="card-body overflow-auto p-3" style="max-height: 75vh;">
-                    <div v-for="alerta in alertasFiltrados" :key="alerta.id_pncp" class="bg-dark-panel border-start border-danger border-4 p-3 mb-2 rounded shadow-sm text-light d-flex justify-content-between align-items-center">
+                    <div v-for="alerta in alertasFiltrados" :key="alerta.id_pncp" class="bg-dark-panel border-start border-danger border-4 p-3 mb-2 rounded text-light d-flex justify-content-between align-items-center">
                         <div>
                             <span class="fw-bold text-warning fs-5">📍 {{ alerta.cidade_norm }} - {{ alerta.uf }}</span><br>
                             <span class="text-light">{{ alerta.nome_orgao }}</span><br>
-                            <span class="text-secondary small">Portal: <b class="text-danger">{{ alerta.sistema_concorrente }}</b> | Data: <code>{{ alerta.data_publicacao.substring(0,10) }}</code></span>
+                            <span class="text-secondary small">Publicou em: <b class="text-danger">{{ alerta.sistema_concorrente }}</b> | Data: {{ alerta.data_publicacao }}</span>
                         </div>
-                        <a :href="gerarLinkPNCP(alerta.id_pncp)" target="_blank" class="btn btn-outline-light ms-3 text-nowrap" v-if="alerta.id_pncp">
-                            🔗 Ver Edital no PNCP
-                        </a>
+                        <a :href="'https://pncp.gov.br/app/editais/' + alerta.id_pncp" target="_blank" class="btn btn-outline-light ms-3">🔗 Ver Edital</a>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- NAVBAR -->
         <nav class="navbar navbar-expand-lg shadow-sm z-2 border-bottom border-dark-subtle" style="background-color: #11111a;">
             <div class="container-fluid">
                 <a class="navbar-brand" href="#">
-                    <img src="assets/logo_licitanet.jpeg" alt="Logo Licitanet" height="45" class="d-inline-block align-text-top">
+                    <img src="assets/logo_licitanet.jpeg" alt="Licitanet" height="45">
                 </a>
-                <div class="collapse navbar-collapse" id="navbarNav">
+                <div class="collapse navbar-collapse">
                     <ul class="navbar-nav ms-auto">
                         <li class="nav-item">
-                            <a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'mapa', 'text-secondary': abaAtiva !== 'mapa' }" @click="mudarAba('mapa')" href="#" style="cursor: pointer;">🗺️ Mapa de Mercado</a>
+                            <a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'mapa' }" @click="abaAtiva = 'mapa'" href="#">🗺️ Mapa</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'dashboards', 'text-secondary': abaAtiva !== 'dashboards' }" @click="mudarAba('dashboards')" href="#" style="cursor: pointer;">📈 Dashboards</a>
+                            <a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'dashboards' }" @click="abaAtiva = 'dashboards'; atualizarDashboards();" href="#">📈 Dashboards</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'radar', 'text-secondary': abaAtiva !== 'radar' }" @click="mudarAba('radar')" href="#" style="cursor: pointer;">🎯 Radar Comercial</a>
+                            <a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'radar' }" @click="abaAtiva = 'radar'" href="#">🎯 Radar</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'historico', 'text-secondary': abaAtiva !== 'historico' }" @click="mudarAba('historico')" href="#" style="cursor: pointer;">📜 Histórico</a>
+                            <a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'historico' }" @click="abaAtiva = 'historico'" href="#">📜 Histórico</a>
                         </li>
                     </ul>
                 </div>
             </div>
         </nav>
 
-        <div class="d-flex flex-grow-1 overflow-hidden z-1">
+        <div class="d-flex flex-grow-1 overflow-hidden">
             
-            <div class="sidebar p-3 shadow-sm d-flex flex-column z-2">
-                <h6 class="mb-3 text-muted border-bottom border-dark-subtle pb-2 fw-bold"> Filtros Globais</h6>
+            <!-- SIDEBAR DE FILTROS -->
+            <div class="sidebar p-3 shadow-sm d-flex flex-column z-2 bg-dark" style="width: 280px;">
+                <h6 class="mb-3 text-muted border-bottom border-dark-subtle pb-2 fw-bold">Filtros Inteligentes</h6>
                 
-                <div class="mb-3 dropdown">
-                    <label class="form-label mb-1">Estados:</label>
-                    <button class="form-select form-select-sm bg-dark-panel text-light shadow-sm dropdown-toggle text-start border-secondary" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
-                        {{ textoEstadosSelecionados }}
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-dark shadow border-secondary p-2 w-100" style="max-height: 250px; overflow-y: auto; font-size: 13px;">
-                        <li class="mb-1 pb-1 border-bottom border-secondary">
-                            <div class="form-check ms-3 me-2 mb-0">
-                                <input class="form-check-input" type="checkbox" value="Todos" v-model="ufsSelecionadas" @change="tratarSelecaoUFs('Todos')" id="uf_Todos_drop">
-                                <label class="form-check-label fw-bold text-warning w-100" for="uf_Todos_drop" style="cursor: pointer;">🌎 Todo o Brasil</label>
-                            </div>
-                        </li>
-                        <li v-for="uf in listaUFs" :key="uf">
-                            <div class="form-check ms-3 me-2 mb-0 py-1" style="transition: background 0.2s;" onmouseover="this.style.background='#333'" onmouseout="this.style.background='transparent'">
-                                <input class="form-check-input" type="checkbox" :value="uf" v-model="ufsSelecionadas" @change="tratarSelecaoUFs(uf)" :id="'uf_drop_'+uf">
-                                <label class="form-check-label text-light w-100" :for="'uf_drop_'+uf" style="cursor: pointer;">{{ uf }}</label>
-                            </div>
-                        </li>
-                    </ul>
-                </div>
-
-                <div v-if="abaAtiva === 'radar'" class="mt-2 mb-3 p-2 rounded bg-dark-main border-dark-subtle border">
-                    <h6 class="text-secondary small fw-bold mb-2">Filtros do Radar</h6>
-                    <label class="form-label" style="font-size: 11px;">Tipo de Órgão:</label>
-                    <select class="form-select form-select-sm mb-2" v-model="radarTipoOrgao" @change="filtrarRadar">
-                        <option value="Todos">Todos</option>
-                        <option value="Prefeitura/Município">Prefeituras</option>
-                        <option value="Câmaras">Câmaras</option>
-                        <option value="Fundos/Secretarias">Fundos/Secretarias</option>
-                        <option value="Outros">Outros</option>
+                <!-- Filtro UF -->
+                <div class="mb-3">
+                    <label class="form-label small text-info fw-bold">1. Selecione o Estado:</label>
+                    <select class="form-select form-select-sm bg-dark text-light border-secondary" v-model="ufsSelecionadas[0]" @change="filtrarDados">
+                        <option value="Todos">Todo o Brasil</option>
+                        <option v-for="uf in listaUFs" :value="uf">{{ uf }}</option>
                     </select>
+                </div>
 
-                    <label class="form-label mt-1" style="font-size: 11px;">Última Plataforma:</label>
-                    <select class="form-select form-select-sm mb-2" v-model="radarPlataforma" @change="filtrarRadar">
-                        <option value="Todas">Todas</option>
-                        <option v-for="plat in listaPlataformasRadar" :key="plat" :value="plat">{{ plat }}</option>
+                <!-- Filtro Cidade -->
+                <div class="mb-3">
+                    <label class="form-label small text-info fw-bold">2. Selecione o Município:</label>
+                    <select class="form-select form-select-sm bg-dark text-light border-secondary" v-model="cidadeSelecionada" :disabled="ufsSelecionadas[0] === 'Todos'">
+                        <option value="Todos">Todas as Cidades</option>
+                        <option v-for="cidade in listaCidades" :value="cidade">{{ cidade }}</option>
                     </select>
-                    
-                    <label class="form-label" style="font-size: 11px;">Meses inativo: <span class="text-warning fw-bold">{{ radarMeses }}</span> ou mais</label>
-                    <input type="range" class="form-range" min="2" max="12" step="1" v-model="radarMeses" @change="filtrarRadar">
                 </div>
 
-                <div class="mb-3 dropdown" v-if="abaAtiva !== 'radar'">
-                    <label class="form-label mb-1">Município:</label>
-                    <button class="form-select form-select-sm bg-dark-panel text-light shadow-sm dropdown-toggle text-start border-secondary" 
-                            type="button" data-bs-toggle="dropdown" aria-expanded="false"
-                            :disabled="ufsSelecionadas.includes('Todos') || ufsSelecionadas.length > 1">
-                        {{ cidadeSelecionada === 'Todos' ? 'Todas as Cidades' : cidadeSelecionada }}
-                    </button>
-                    
-                    <div class="dropdown-menu dropdown-menu-dark shadow border-secondary p-2 w-100">
-                        <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary mb-2" 
-                               placeholder="🔍 Buscar município..." v-model="buscaCidade" @click.stop>
-                        
-                        <ul class="list-unstyled mb-0" style="max-height: 220px; overflow-y: auto; font-size: 13px;">
-                            <li class="mb-1 pb-1 border-bottom border-secondary">
-                                <a class="dropdown-item rounded fw-bold text-warning px-2 py-1" href="#" @click.prevent="selecionarCidade('Todos')">
-                                    🌎 Todas as Cidades
-                                </a>
-                            </li>
-                            <li v-for="cidade in cidadesFiltradasNaBusca" :key="cidade">
-                                <a class="dropdown-item rounded text-light px-2 py-1" href="#" @click.prevent="selecionarCidade(cidade)">
-                                    {{ cidade }}
-                                </a>
-                            </li>
-                            <li v-if="cidadesFiltradasNaBusca.length === 0" class="text-muted small px-2 py-1 text-center">Nenhum município encontrado.</li>
-                        </ul>
-                    </div>
-
-                    <small class="text-muted" style="font-size: 10px;" v-if="ufsSelecionadas.length > 1 && !ufsSelecionadas.includes('Todos')">
-                        *Selecione apenas 1 estado para habilitar.
-                    </small>
-                </div>
-
-                <button v-if="abaAtiva !== 'radar' && abaAtiva !== 'historico'" class="btn btn-outline-warning btn-sm fw-bold w-100 mb-4" @click="baixarRelatorio">📥 Baixar Excel Geral</button>
-                <button v-if="abaAtiva === 'radar'" class="btn btn-danger btn-sm fw-bold w-100 mb-4" @click="baixarRelatorioRadar">📥 Baixar Excel Radar</button>
-
-                <h6 class="text-muted mb-2 border-bottom border-dark-subtle pb-1 fw-bold" v-show="abaAtiva === 'mapa' || abaAtiva === 'historico'">🎨 Plataformas</h6>
-                <div class="legend-container flex-grow-1" v-show="abaAtiva === 'mapa' || abaAtiva === 'historico'">
-                    <div v-for="(cor, sistema) in coresSistemas" :key="sistema" class="legend-item d-flex align-items-center mb-1">
-                        <span class="color-box shadow-sm" :style="{ backgroundColor: cor }"></span>
-                        <span class="legend-text text-truncate" :title="sistema">{{ sistema }}</span>
+                <!-- Legenda de Cores -->
+                <h6 class="text-muted mt-4 mb-2 small fw-bold border-bottom border-dark-subtle pb-1">Plataformas</h6>
+                <div class="legend-container overflow-auto flex-grow-1">
+                    <div v-for="(cor, sistema) in coresSistemas" :key="sistema" class="d-flex align-items-center mb-1">
+                        <span class="d-inline-block rounded-circle me-2" :style="{ backgroundColor: cor, width: '12px', height: '12px' }"></span>
+                        <span class="small text-truncate" style="max-width: 200px;">{{ sistema }}</span>
                     </div>
                 </div>
             </div>
 
-            <div class="main-content flex-grow-1 d-flex flex-column bg-dark-main position-relative">
+            <!-- CONTEÚDO PRINCIPAL -->
+            <div class="main-content flex-grow-1 bg-dark-main overflow-hidden position-relative">
                 
-                <div :class="abaAtiva === 'mapa' ? 'd-flex' : 'd-none'" class="flex-column h-100 w-100">
-                    <div class="m-3 mb-0">
-                        <div class="card bg-dark-panel border-0 shadow-sm">
-                            <div class="card-header bg-dark-panel border-bottom-0 d-flex justify-content-between align-items-center">
-                                <h6 class="mb-0 text-danger fw-bold" v-if="alertasFiltrados.length > 0">
-                                    🚨 Identificamos {{ alertasFiltrados.length }} prefeituras publicando fora!
-                                </h6>
-                                <h6 class="mb-0 text-success fw-bold" v-else>
-                                    ✅ Sem alertas recentes de concorrência.
-                                </h6>
-                                <button v-if="alertasFiltrados.length > 0" class="btn btn-sm btn-outline-danger" @click="abrirModalAlertas">Ver todos</button>
-                            </div>
+                <!-- ABA 1: MAPA -->
+                <div v-show="abaAtiva === 'mapa'" class="h-100 d-flex flex-column">
+                    <div class="p-3 pb-0">
+                        <div class="card bg-dark-panel border-0 p-2 d-flex flex-row justify-content-between align-items-center shadow">
+                            <span :class="alertasFiltrados && alertasFiltrados.length > 0 ? 'text-danger fw-bold' : 'text-success fw-bold'">
+                                {{ alertasFiltrados && alertasFiltrados.length > 0 ? '🚨 Alertas de Churn detectados na região!' : '✅ Sem alertas recentes de perda para a concorrência.' }}
+                            </span>
+                            <button v-if="alertasFiltrados && alertasFiltrados.length > 0" class="btn btn-sm btn-danger fw-bold" @click="alertasExpandidos = true">Visualizar Alertas</button>
                         </div>
                     </div>
-                    <div id="map" class="flex-grow-1 m-3 rounded shadow-sm"></div>
+                    <div id="map" class="flex-grow-1 m-3 rounded border border-secondary shadow-lg"></div>
                 </div>
 
-                <div v-if="abaAtiva === 'dashboards'" class="p-4 h-100 overflow-auto w-100 bg-dark-main">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h4 class="fw-bold text-white mb-0"> Visão Estratégica</h4>
-                        <span class="badge bg-secondary fs-6 text-white">{{ ufsSelecionadas.includes('Todos') ? 'Brasil' : ufsSelecionadas.join(', ') }}</span>
-                    </div>
-                    
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-4">
-                            <div class="card bg-dark-panel border-0 p-3 shadow-sm text-center h-100">
-                                <h6 class="text-muted mb-1 small text-uppercase">Municípios Analisados</h6>
-                                <h3 class="text-white fw-bold mb-0">{{ dadosFiltrados.length }}</h3>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card bg-dark-panel border-0 p-3 shadow-sm text-center h-100">
-                                <h6 class="text-muted mb-1 small text-uppercase">Plataforma Líder</h6>
-                                <h3 class="text-warning fw-bold mb-0">{{ plataformaLider }}</h3>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card bg-dark-panel border-0 p-3 shadow-sm text-center h-100">
-                                <h6 class="text-muted mb-1 small text-uppercase">Prefeituras Exclusivas</h6>
-                                <h3 class="text-success fw-bold mb-0">{{ percentualExclusivo }}%</h3>
-                            </div>
-                        </div>
-                    </div>
-
+                <!-- ABA 2: DASHBOARDS -->
+                <div v-show="abaAtiva === 'dashboards'" class="p-4 h-100 overflow-auto">
+                    <h4 class="fw-bold mb-4">📈 Visão Estratégica</h4>
                     <div class="row g-4">
                         <div class="col-md-6">
-                            <div class="card bg-dark-panel border-0 shadow-sm h-100">
-                                <div class="card-body">
-                                    <h6 class="card-title text-center text-muted fw-bold mb-4">Market Share (Top 10)</h6>
-                                    <div style="height: 280px; position: relative;">
-                                        <canvas id="chartPlataformas"></canvas>
-                                    </div>
-                                </div>
+                            <div class="card bg-dark-panel border-0 p-4 shadow-sm text-center">
+                                <h5 class="text-info fw-bold">Market Share (Plataforma Líder)</h5>
+                                <div style="height: 350px;"><canvas id="chartPlataformas"></canvas></div>
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="card bg-dark-panel border-0 shadow-sm h-100">
-                                <div class="card-body">
-                                    <h6 class="card-title text-center text-muted fw-bold mb-4">Status de Concorrência</h6>
-                                    <div style="height: 280px; position: relative;">
-                                        <canvas id="chartConcorrencia"></canvas>
-                                    </div>
-                                </div>
+                            <div class="card bg-dark-panel border-0 p-4 shadow-sm text-center">
+                                <h5 class="text-info fw-bold">Status de Concorrência</h5>
+                                <div style="height: 350px;"><canvas id="chartConcorrencia"></canvas></div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div v-if="abaAtiva === 'radar'" class="p-4 h-100 overflow-auto w-100 bg-dark-main d-flex flex-column">
-                    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-dark-subtle pb-2">
-                        <div>
-                            <h4 class="fw-bold text-warning mb-1">🎯 Radar de Prospecção</h4>
-                            <p class="text-muted small mb-0">Órgãos que não publicam no PNCP há meses.</p>
-                        </div>
-                        <span class="badge bg-danger fs-5">{{ dadosRadarFiltrados.length }} Alvos</span>
+                <!-- ABA 3: RADAR COMERCIAL -->
+                <div v-show="abaAtiva === 'radar'" class="p-4 h-100 overflow-auto">
+                    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-dark-subtle pb-3">
+                        <h4 class="fw-bold text-warning mb-0">🎯 Radar de Prospecção</h4>
+                        <span class="text-muted small">Mostrando órgãos sem publicar há mais de 2 meses</span>
                     </div>
                     
-                    <div class="table-responsive shadow-sm border border-dark-subtle rounded flex-grow-1">
-                        <table class="table table-dark table-hover table-striped mb-0 align-middle">
-                            <thead>
-                                <tr>
-                                    <th>Estado</th>
+                    <div class="table-responsive bg-dark-panel rounded border border-secondary shadow-lg">
+                        <table class="table table-dark table-hover mb-0 align-middle">
+                            <thead class="bg-dark">
+                                <tr class="text-muted small">
+                                    <th class="ps-3">Estado</th>
                                     <th>Município</th>
                                     <th>Órgão</th>
                                     <th>Última Plataforma</th>
-                                    <th>Última Publicação</th>
                                     <th class="text-center">Inatividade</th>
-                                    <th class="text-center">Ação</th>
+                                    <th class="text-center pe-3">Ação</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="item in radarPaginado" :key="item.Orgao + item.Municipio">
-                                    <td><span class="badge bg-secondary">{{ item.Estado }}</span></td>
+                                <tr v-for="item in dadosRadar" :key="item.CNPJ + item.Orgao">
+                                    <td class="ps-3"><span class="badge bg-secondary">{{ item.Estado }}</span></td>
                                     <td class="fw-bold text-light">{{ item.Municipio }}</td>
-                                    <td class="small text-muted">{{ item.Orgao }}</td>
-                                    <td><span class="badge bg-dark border border-secondary text-light">{{ item.Plataforma }}</span></td>
-                                    <td class="text-light">{{ item.Ultima_Publicacao }}</td>
-                                    
-                                    <td class="text-center fw-bold text-danger">
-                                        {{ item.Meses_Inativo }} meses
+                                    <td class="small text-muted" style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" :title="item.Orgao">{{ item.Orgao }}</td>
+                                    <td><span class="badge bg-dark border border-secondary">{{ item.Plataforma }}</span></td>
+                                    <td class="text-center fw-bold text-danger">{{ item.Meses_Inativo }} meses</td>
+                                    <td class="text-center pe-3">
+                                        <a :href="'https://pncp.gov.br/app/editais/' + item.Ultimo_ID_PNCP" target="_blank" class="btn btn-sm btn-outline-info">🔗 PNCP</a>
                                     </td>
-                                    
-                                    <td class="text-center">
-                                        <a :href="gerarLinkPNCP(item.Ultimo_ID_PNCP)" target="_blank" class="btn btn-sm btn-outline-info text-nowrap" v-if="item.Ultimo_ID_PNCP" title="Ver edital no portal do PNCP">
-                                            🔗 PNCP
-                                        </a>
-                                    </td>
-                                </tr>
-                                <tr v-if="dadosRadarFiltrados.length === 0">
-                                    <td colspan="7" class="text-center py-4 text-muted">Nenhum alvo encontrado para os filtros atuais.</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
-
-                    <div class="d-flex justify-content-between align-items-center mt-3 p-2 bg-dark-panel rounded border border-dark-subtle" v-if="dadosRadarFiltrados.length > 0">
-                        <span class="text-muted small">Mostrando página {{ paginaAtualRadar }} de {{ totalPaginasRadar }}</span>
-                        <div class="btn-group">
-                            <button class="btn btn-sm btn-outline-secondary text-light" :disabled="paginaAtualRadar === 1" @click="mudarPagina(paginaAtualRadar - 1)">⬅️ Anterior</button>
-                            <button class="btn btn-sm btn-secondary disabled fw-bold">{{ paginaAtualRadar }}</button>
-                            <button class="btn btn-sm btn-outline-secondary text-light" :disabled="paginaAtualRadar === totalPaginasRadar" @click="mudarPagina(paginaAtualRadar + 1)">Próxima ➡️</button>
-                        </div>
-                    </div>
                 </div>
 
-                <div v-if="abaAtiva === 'historico'" class="p-4 h-100 overflow-auto w-100 bg-dark-main">
-                    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-dark-subtle pb-2">
-                        <h4 class="fw-bold text-info mb-1">📜 Raio-X do Município</h4>
-                    </div>
-
+                <!-- ABA 4: HISTÓRICO (RAIO-X) COM MODALIDADE -->
+                <div v-show="abaAtiva === 'historico'" class="p-4 h-100 overflow-auto">
+                    <h4 class="fw-bold text-info mb-4 border-bottom border-dark-subtle pb-2">📜 Raio-X do Município</h4>
+                    
                     <div v-if="Object.keys(historicoFiltrado).length === 0" class="text-center mt-5 text-muted">
-                        <h3 style="font-size: 3rem;">🏢</h3>
-                        <h5>Selecione 1 Estado e 1 Município no menu lateral</h5>
-                        <p>Para ver as últimas 10 publicações de cada órgão desta cidade e a concorrência de plataformas.</p>
+                        <h1 class="display-1">🏢</h1>
+                        <h5 class="mt-3">Para liberar o Raio-X, selecione 1 Estado e 1 Município no menu lateral.</h5>
+                        <p class="small">Analise o comportamento de cada órgão desta cidade (Modalidades e Plataformas) nas últimas 10 licitações.</p>
                     </div>
 
-                    <div v-else v-for="(licitacoes, orgao) in historicoFiltrado" :key="orgao" class="card bg-dark-panel border-secondary mb-4 shadow-sm">
-                        <div class="card-header bg-dark border-secondary text-light fw-bold fs-5">
-                            {{ orgao }}
-                        </div>
+                    <div v-else v-for="(licitacoes, orgao) in historicoFiltrado" :key="orgao" class="card bg-dark-panel border-secondary mb-4 shadow">
+                        <div class="card-header bg-dark border-secondary text-info fw-bold">{{ orgao }}</div>
                         <div class="card-body p-0">
-                            <table class="table table-dark table-hover table-sm mb-0">
-                                <thead class="text-muted small">
-                                    <tr>
-                                        <th class="ps-3">Data da Publicação</th>
-                                        <th>Plataforma Utilizada</th>
+                            <table class="table table-dark table-hover mb-0 small">
+                                <thead>
+                                    <tr class="text-muted">
+                                        <th class="ps-3">Data</th>
+                                        <th>Modalidade</th>
+                                        <th>Plataforma</th>
                                         <th class="text-end pe-3">Edital</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr v-for="lic in licitacoes" :key="lic.id_pncp">
-                                        <td class="ps-3 text-light">{{ lic.data_publicacao }}</td>
+                                        <td class="ps-3">{{ lic.data_publicacao }}</td>
+                                        
+                                        <!-- Nova Coluna de Modalidade -->
+                                        <td class="text-light fw-semibold" style="font-size: 11px;">
+                                            {{ lic.modalidade || 'Não informada' }}
+                                        </td>
+                                        
                                         <td>
-                                            <span class="badge" :style="{ backgroundColor: coresSistemas[lic.plataforma] || coresSistemas['Outros'] }">
+                                            <span class="badge text-dark fw-bold" :style="{ backgroundColor: coresSistemas[lic.plataforma] || coresSistemas['Outros'] }">
                                                 {{ lic.plataforma }}
                                             </span>
                                         </td>
                                         <td class="text-end pe-3">
-                                            <a :href="gerarLinkPNCP(lic.id_pncp)" target="_blank" class="btn btn-sm btn-outline-info py-0" style="font-size: 11px;">🔗 PNCP</a>
+                                            <a :href="'https://pncp.gov.br/app/editais/' + lic.id_pncp" target="_blank" class="btn btn-sm btn-outline-info py-0" style="font-size: 10px;">🔗</a>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -333,6 +229,7 @@
         </div>
     </div>
 
+    <!-- Scripts -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

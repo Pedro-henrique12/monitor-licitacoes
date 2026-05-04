@@ -107,11 +107,12 @@ def gerar_dados_mercado():
             data_publicacao, 
             sistema_fonte AS plataforma, 
             id_pncp,
+            modalidade, -- 👈 ADICIONAMOS A MODALIDADE AQUI
             ROW_NUMBER() OVER(PARTITION BY uf, cidade_norm, nome_orgao ORDER BY data_publicacao DESC) as rn
         FROM licitacoes_raw
         WHERE id_pncp IS NOT NULL
     )
-    SELECT uf, municipio, orgao, data_publicacao, plataforma, id_pncp 
+    SELECT uf, municipio, orgao, data_publicacao, plataforma, id_pncp, modalidade 
     FROM Ranked 
     WHERE rn <= 10
     """
