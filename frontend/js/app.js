@@ -16,6 +16,7 @@ createApp({
     data() {
         return {
             abaAtiva: 'mapa', 
+            dadosIA: [], // <-- VARIAVEL DA IA ADICIONADA AQUI
             dadosMercado: [], dadosFiltrados: [], alertas: [], alertasFiltrados: [], geoJsonDados: null,
             dadosHistorico: [], // Guarda o histórico de licitações
             mapa: null, camadaGeoJson: null, camadaEstados: null, geoJsonEstados: null, graficoPlat: null, graficoConc: null,
@@ -107,13 +108,14 @@ createApp({
                     this.listaPlataformasRadar = plats.sort();
                 }
 
-                // Adicionado o historico.json na busca simultânea
-                const [resAlertas, resDados, resGeo, resEstados, resHist] = await Promise.all([
+                // FETCH ATUALIZADO PARA PUXAR O ARQUIVO DA IA (resIA)
+                const [resAlertas, resDados, resGeo, resEstados, resHist, resIA] = await Promise.all([
                     fetch('../data/output/alertas.json'), 
                     fetch('../data/output/dados_mercado.json'), 
                     fetch('../data/geo/municipios_ibge.json/geojs-100-mun.json'),
                     fetch('https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson'),
-                    fetch('../data/output/historico.json')
+                    fetch('../data/output/historico.json'),
+                    fetch('../data/output/rotas_ia.json') // <-- NOVO ARQUIVO AQUI
                 ]);
                 
                 if (resAlertas.ok) {
@@ -135,6 +137,11 @@ createApp({
 
                 if (resHist && resHist.ok) {
                     this.dadosHistorico = await resHist.json();
+                }
+                
+                // SALVA OS DADOS DA IA NO VUE
+                if (resIA && resIA.ok) {
+                    this.dadosIA = await resIA.json();
                 }
 
                 this.prepararFiltros();

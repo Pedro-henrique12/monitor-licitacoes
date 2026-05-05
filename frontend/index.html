@@ -64,6 +64,10 @@
                         <li class="nav-item">
                             <a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'historico', 'text-secondary': abaAtiva !== 'historico' }" @click="mudarAba('historico')" href="#" style="cursor: pointer;">📜 Histórico</a>
                         </li>
+                        <!-- NOVO BOTÃO DA IA -->
+                        <li class="nav-item">
+                            <a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'copiloto', 'text-secondary': abaAtiva !== 'copiloto' }" @click="mudarAba('copiloto')" href="#" style="cursor: pointer;">🤖 Copiloto IA</a>
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -327,6 +331,54 @@
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ABA 5: COPILOTO IA (CROSS-SELL) -->
+                <div v-if="abaAtiva === 'copiloto'" class="p-4 h-100 overflow-auto w-100 bg-dark-main">
+                    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-dark-subtle pb-3">
+                        <div>
+                            <h4 class="fw-bold mb-1" style="color: #a855f7;">🤖 Copiloto de Vendas IA</h4>
+                            <p class="text-muted small mb-0">Estratégias de Cross-sell geradas pelo Gemini analisando municípios com prefeituras parceiras.</p>
+                        </div>
+                        <span class="badge fs-5 text-white" style="background-color: #a855f7;">{{ dadosIA.length }} Oportunidades</span>
+                    </div>
+
+                    <div v-if="dadosIA.length === 0" class="text-center mt-5 text-muted">
+                        <h3>⏳ Processando Inteligência...</h3>
+                        <p>Certifique-se de que o script da IA rodou e gerou o arquivo rotas_ia.json.</p>
+                    </div>
+
+                    <div class="row g-4">
+                        <div class="col-md-6 col-lg-4" v-for="(alvo, index) in dadosIA" :key="index">
+                            <div class="card bg-dark-panel border-secondary h-100 shadow-lg" style="border-top: 4px solid #a855f7 !important;">
+                                <div class="card-header bg-dark border-secondary">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <h6 class="text-light fw-bold mb-0 lh-base">{{ alvo.Orgao_Alvo }}</h6>
+                                    </div>
+                                    <div class="mt-2 small">
+                                        <span class="text-warning fw-bold">📍 {{ alvo.Municipio }} - {{ alvo.Estado }}</span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3 p-2 rounded bg-dark border border-secondary small">
+                                        <div class="text-muted mb-1">Status Atual:</div>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span>Prefeitura usa: <b class="text-success">Licitanet</b></span>
+                                            <span>Este órgão usa: <b class="text-danger">{{ alvo.Plataforma_Atual }}</b></span>
+                                        </div>
+                                    </div>
+                                    
+                                    <h6 class="text-muted small fw-bold mb-2">🧠 Dossiê Estratégico (Gemini):</h6>
+                                    <pre class="text-light text-wrap fw-light" style="font-size: 13px; font-family: inherit;">{{ alvo.Dossie_IA }}</pre>
+                                </div>
+                                <div class="card-footer bg-dark border-secondary text-center">
+                                    <button class="btn btn-sm w-100 fw-bold text-white" style="background-color: #a855f7; border-color: #a855f7;">
+                                        ✅ Visita Agendada
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
