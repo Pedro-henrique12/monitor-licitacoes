@@ -298,7 +298,22 @@ createApp({
                 options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } } }
             }));
         },
-
+        formatarTextoIA(texto) {
+            if (!texto) return '';
+            
+            // 1. Transforma os **textos em negrito** da IA em tags <strong> amarelas
+            let formatado = texto.replace(/\*\*(.*?)\*\*/g, '<strong class="text-warning">$1</strong>');
+            
+            // 2. Transforma os asteriscos de lista (* ) em quebra de linha com um ícone de alvo
+            formatado = formatado.replace(/\n?\s*\*\s/g, '<br><br>🎯 ');
+            
+            // 3. Remove a quebra de linha extra no começo (se houver) para o card ficar alinhado
+            if (formatado.startsWith('<br><br>')) {
+                formatado = formatado.substring(8);
+            }
+            
+            return formatado;
+        },
         baixarRelatorioRadar() {
             if (this.dadosRadarFiltrados.length === 0) return;
             const ws = XLSX.utils.json_to_sheet(this.dadosRadarFiltrados);
