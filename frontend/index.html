@@ -353,6 +353,7 @@
                     <div class="row g-4">
                         <div class="col-md-6 col-lg-4" v-for="(alvo, index) in dadosIA" :key="index">
                             <div class="card bg-dark-panel border-secondary h-100 shadow-lg" style="border-top: 4px solid #a855f7 !important;">
+                                
                                 <div class="card-header bg-dark border-secondary">
                                     <div class="d-flex justify-content-between align-items-start">
                                         <h6 class="text-light fw-bold mb-0 lh-base">{{ alvo.Orgao_Alvo }}</h6>
@@ -361,7 +362,9 @@
                                         <span class="text-warning fw-bold">📍 {{ alvo.Municipio }} - {{ alvo.Estado }}</span>
                                     </div>
                                 </div>
+                                
                                 <div class="card-body">
+                                    <!-- COMPARATIVO -->
                                     <div class="mb-3 p-2 rounded bg-dark border border-secondary small shadow-sm">
                                         <div class="text-muted mb-1 border-bottom border-secondary pb-1">Comparativo de Plataforma:</div>
                                         <div class="d-flex justify-content-between align-items-center mt-2">
@@ -370,11 +373,14 @@
                                         </div>
                                     </div>
                                     
-                                    <h6 class="text-muted small fw-bold mb-2">🧠 Dossiê Estratégico (Gemini):</h6>
-                                    <pre class="text-light text-wrap fw-light" style="font-size: 13px; font-family: inherit;">{{ alvo.Dossie_IA }}</pre>
-                                </div>
-                                <div class="card-footer bg-dark border-secondary text-center">
+                                    <h6 class="text-muted small fw-bold mb-3">🧠 Dossiê Estratégico (Gemini):</h6>
+                                    
+                                    <!-- TEXTO FORMATADO PELA IA (A tag <pre> antiga foi removida daqui) -->
                                     <div class="text-light fw-light lh-base pb-2" style="font-size: 13px;" v-html="formatarTextoIA(alvo.Dossie_IA)"></div>
+                                </div>
+                                
+                                <div class="card-footer bg-dark border-secondary text-center">
+                                    <button class="btn btn-sm w-100 fw-bold text-white" style="background-color: #a855f7; border-color: #a855f7;">
                                         ✅ Visita Agendada
                                     </button>
                                 </div>
