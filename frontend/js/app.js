@@ -282,27 +282,53 @@ createApp({
             this.carregandoIA = true;
             
             try {
-                const instrucao = `Você é um assistente logístico B2B. Analise o texto do usuário e extraia ESTRITAMENTE as cidades e estados que ele deseja visitar. 
-                Retorne APENAS um array JSON válido, sem markdown, contendo objetos com "municipio" e "uf". A sigla da UF deve ser com duas letras maiúsculas.
-                Exemplo correto: [{"municipio": "Delta", "uf": "MG"}, {"municipio": "Belo Horizonte", "uf": "MG"}]
-                Texto do usuário: "${this.promptGestor}"`;
+                // Instrução mais direta para evitar que a IA se perca
+                const instrucao = `Você é um assistente logístico. Extraia as cidades do texto e retorne APENAS um array JSON. 
+                Formato: [{"municipio": "Nome da Cidade", "uf": "Sigla"}]
+                Texto: ${this.promptGestor}`;
 
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+                // Mudamos para o endpoint v1 que é o padrão atual
+                const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+                const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: instrucao }] }] })
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{ text: instrucao }]
+                        }]
+                    })
                 });
 
+                // Se o Google responder erro (400, 403, 429...), vamos ler o porquê
+                if (!response.ok) {
+                    const erroDetalhado = await response.json();
+                    console.error("ERRO DIRETO DO GOOGLE:", erroDetalhado);
+                    throw new Error(erroDetalhado.error?.message || "Erro desconhecido na API do Google");
+                }
+
                 const data = await response.json();
-                if (!data.candidates) throw new Error("A IA não retornou um formato esperado.");
-
-                let respostaTexto = data.candidates[0].content.parts[0].text;
-                respostaTexto = respostaTexto.replace(/```json/gi, '').replace(/```/g, '').trim();
                 
-                const cidadesExtraidas = JSON.parse(respostaTexto);
+                // Verifica se a estrutura da resposta existe
+                if (!data.candidates || !data.candidates[0].content.parts[0].text) {
+                    throw new Error("A IA respondeu, mas o conteúdo veio vazio.");
+                }
 
+                let textoIA = data.candidates[0].content.parts[0].text;
+                
+                // Limpeza para garantir que pegamos apenas o que está entre [ ]
+                const jsonMatch = textoIA.match(/\[[\s\S]*\]/);
+                if (!jsonMatch) {
+                    console.log("Texto bruto da IA:", textoIA);
+                    throw new Error("A IA não gerou uma lista de cidades válida.");
+                }
+                
+                const cidadesExtraidas = JSON.parse(jsonMatch[0]);
+
+                // Adiciona as cidades na rota
                 for (const item of cidadesExtraidas) {
-                    this.planejadorUF = item.uf;
+                    this.planejadorUF = item.uf.toUpperCase();
+                    // Importante: selecionarCidadePlanejador deve existir no seu methods
                     this.selecionarCidadePlanejador(item.municipio);
                     if (this.novaCidadeRota.municipio) {
                         this.adicionarCidadeARota();
@@ -310,11 +336,11 @@ createApp({
                 }
                 
                 this.promptGestor = ''; 
-                alert(`✨ A Inteligência Artificial adicionou ${cidadesExtraidas.length} cidades ao seu roteiro!`);
+                alert(`✨ Roteiro gerado! Adicionamos ${cidadesExtraidas.length} paradas.`);
 
             } catch (error) {
-                console.error(error);
-                alert("Erro ao processar o roteiro. Tente escrever de forma mais clara as cidades e estados.");
+                console.error("DETALHE DO ERRO NO CONSOLE:", error);
+                alert("Ops! " + error.message);
             } finally {
                 this.carregandoIA = false;
             }
