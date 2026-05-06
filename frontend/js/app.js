@@ -1,3 +1,5 @@
+const GEMINI_API_KEY = "AIzaSyB6v9_aP7v8sRz6Q1z-3o9KUjM0VjKc8U";
+
 const { createApp, markRaw, nextTick } = Vue;
 
 const CORES_SISTEMAS = {
@@ -25,9 +27,12 @@ createApp({
             dadosRadar: [], dadosRadarFiltrados: [], radarTipoOrgao: 'Todos', radarMeses: 2, radarPlataforma: 'Todas', listaPlataformasRadar: [],
             alertasExpandidos: false, paginaAtualRadar: 1, itensPorPagina: 50,
             
-            // --- PLANEJADOR DE ROTAS ---
+            // --- PLANEJADOR DE ROTAS E IA ---
             planejadorUF: '',
             planejadorBuscaCidade: '',
+            promptGestor: '',
+            carregandoIA: false,
+            calculandoKM: false,
             rotaEmPlanejamento: { passos: [] },
             novaCidadeRota: {
                 municipio: '', uf: '', km_estrada: 0, km_cidade: 0,
@@ -130,7 +135,7 @@ createApp({
             if (clicado === 'Todos') this.ufsSelecionadas = ['Todos'];
             else { const idx = this.ufsSelecionadas.indexOf('Todos'); if (idx > -1) this.ufsSelecionadas.splice(idx, 1); }
             if (this.ufsSelecionadas.length === 0) this.ufsSelecionadas = ['Todos'];
-            this.cidadeSelecionada = 'Todos'; // Reseta a cidade ao mudar de estado
+            this.cidadeSelecionada = 'Todos'; 
             this.filtrarDados();
         },
         selecionarCidade(c) { this.cidadeSelecionada = c; this.filtrarDados(); },
@@ -144,21 +149,16 @@ createApp({
             this.filtrarRadar();
         },
         
-        // --- FILTRO DO RADAR ATUALIZADO PARA LER A CIDADE ---
         filtrarRadar() {
             let f = this.dadosRadar || [];
             
-            // Filtro por Estado
             if (!this.ufsSelecionadas.includes('Todos')) {
                 f = f.filter(d => this.ufsSelecionadas.includes(d.Estado));
             }
-            
-            // Filtro por Cidade
             if (this.cidadeSelecionada !== 'Todos') {
                 f = f.filter(d => d.Municipio && d.Municipio.toUpperCase() === this.cidadeSelecionada.toUpperCase());
             }
 
-            // Filtros internos do Radar
             if (this.radarPlataforma !== 'Todas') f = f.filter(d => d.Plataforma === this.radarPlataforma);
             f = f.filter(d => d.Meses_Inativo >= this.radarMeses);
 
@@ -233,7 +233,7 @@ createApp({
         mudarPagina(p) { this.paginaAtualRadar = p; },
         formatarTextoIA(t) { return t?.replace(/\*\*(.*?)\*\*/g, '<strong class="text-warning">$1</strong>').replace(/\n?\s*\*\s/g, '<br><br>🎯 ') || ''; },
         
-        // MÉTODOS DO PLANEJADOR
+        // --- MÉTODOS DO PLANEJADOR ---
         limparSelecaoCidadePlanejador() { this.novaCidadeRota.municipio = ''; this.planejadorBuscaCidade = ''; this.novaCidadeRota.orgaosDisponiveis = []; },
         selecionarCidadePlanejador(c) {
             this.novaCidadeRota.municipio = c; this.novaCidadeRota.uf = this.planejadorUF; this.planejadorBuscaCidade = '';
@@ -251,7 +251,6 @@ createApp({
         limparPlanejamento() { if(confirm("Limpar rota?")) this.rotaEmPlanejamento.passos = []; },
         async salvarNoBanco() { if(confirm("Confirmar envio para o banco de dados?")) alert("Dados enviados com sucesso para as tabelas rotas_planejamento e rota_cidades_detalhes!"); },
         
-        // PDF ATUALIZADO COM OS TOTAIS GERAIS
         async gerarRelatorioPDF() {
             const { jsPDF } = window.jspdf; const doc = new jsPDF();
             doc.setFontSize(18); doc.text("Relatório de Planejamento de Viagem - Licitanet", 105, 20, { align: 'center' });
@@ -275,6 +274,123 @@ createApp({
             doc.text(`Quilometragem Total da Rota: ${this.calcularTotalKM} km`, 20, y); y += 6;
             doc.text(`Custo Estimado Total (Hospedagem + Jantar): R$ ${this.calcularTotalCustos}`, 20, y);
             doc.save(`Rota_Licitanet_${new Date().getTime()}.pdf`);
+        },
+
+        // --- MÁGICA 1: GERAR ROTA POR PROMPT COM GEMINI IA ---
+        async gerarRotaPorPrompt() {
+            if (!this.promptGestor) return;
+            this.carregandoIA = true;
+            
+            try {
+                const instrucao = `Você é um assistente logístico B2B. Analise o texto do usuário e extraia ESTRITAMENTE as cidades e estados que ele deseja visitar. 
+                Retorne APENAS um array JSON válido, sem markdown, contendo objetos com "municipio" e "uf". A sigla da UF deve ser com duas letras maiúsculas.
+                Exemplo correto: [{"municipio": "Delta", "uf": "MG"}, {"municipio": "Belo Horizonte", "uf": "MG"}]
+                Texto do usuário: "${this.promptGestor}"`;
+
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: instrucao }] }] })
+                });
+
+                const data = await response.json();
+                if (!data.candidates) throw new Error("A IA não retornou um formato esperado.");
+
+                let respostaTexto = data.candidates[0].content.parts[0].text;
+                respostaTexto = respostaTexto.replace(/```json/gi, '').replace(/```/g, '').trim();
+                
+                const cidadesExtraidas = JSON.parse(respostaTexto);
+
+                for (const item of cidadesExtraidas) {
+                    this.planejadorUF = item.uf;
+                    this.selecionarCidadePlanejador(item.municipio);
+                    if (this.novaCidadeRota.municipio) {
+                        this.adicionarCidadeARota();
+                    }
+                }
+                
+                this.promptGestor = ''; 
+                alert(`✨ A Inteligência Artificial adicionou ${cidadesExtraidas.length} cidades ao seu roteiro!`);
+
+            } catch (error) {
+                console.error(error);
+                alert("Erro ao processar o roteiro. Tente escrever de forma mais clara as cidades e estados.");
+            } finally {
+                this.carregandoIA = false;
+            }
+        },
+
+        // --- MÁGICA 2: CÁLCULO AUTOMÁTICO DE KM COM GOOGLE MAPS ---
+        async calcularKMsGoogleMaps() {
+            if (this.rotaEmPlanejamento.passos.length === 0) return;
+            
+            // Verifica se a API do Google Maps foi carregada no index.html
+            if (typeof google === 'undefined' || typeof google.maps === 'undefined') {
+                alert("A API do Google Maps não foi encontrada. Verifique se você adicionou o script com a chave no index.html.");
+                return;
+            }
+
+            this.calculandoKM = true;
+
+            // O ponto inicial e final é Uberlândia, MG
+            const BASE = "Uberlândia, MG, Brasil";
+            let sequencia = [BASE];
+            this.rotaEmPlanejamento.passos.forEach(p => sequencia.push(`${p.municipio}, ${p.uf}, Brasil`));
+            sequencia.push(BASE);
+
+            try {
+                const service = new google.maps.DistanceMatrixService();
+                
+                // Calcula distância trecho por trecho
+                for (let i = 0; i < this.rotaEmPlanejamento.passos.length; i++) {
+                    const origem = sequencia[i];
+                    const destino = sequencia[i + 1];
+
+                    const request = {
+                        origins: [origem],
+                        destinations: [destino],
+                        travelMode: 'DRIVING',
+                        unitSystem: google.maps.UnitSystem.METRIC,
+                    };
+
+                    await new Promise((resolve, reject) => {
+                        service.getDistanceMatrix(request, (response, status) => {
+                            if (status === 'OK' && response.rows[0].elements[0].status === 'OK') {
+                                const distanciaMetros = response.rows[0].elements[0].distance.value;
+                                const kmArredondado = Math.round(distanciaMetros / 1000);
+                                
+                                this.rotaEmPlanejamento.passos[i].km_estrada = kmArredondado;
+                                this.rotaEmPlanejamento.passos[i].km_total = kmArredondado + parseFloat(this.rotaEmPlanejamento.passos[i].km_cidade);
+                                resolve();
+                            } else {
+                                resolve(); // Continua mesmo se não achar a cidade perfeitamente
+                            }
+                        });
+                    });
+                }
+                
+                // Calcula a distância da volta para mostrar no aviso
+                const requestVolta = {
+                    origins: [sequencia[sequencia.length - 2]],
+                    destinations: [BASE],
+                    travelMode: 'DRIVING',
+                };
+                
+                service.getDistanceMatrix(requestVolta, (response, status) => {
+                    if (status === 'OK' && response.rows[0].elements[0].status === 'OK') {
+                        const voltaKM = Math.round(response.rows[0].elements[0].distance.value / 1000);
+                        alert(`🗺️ Cálculo Finalizado! \n\nAs quilometragens de rodovia foram atualizadas nos cards. O retorno para Uberlândia dará +${voltaKM} km.`);
+                    } else {
+                        alert("🗺️ Cálculo Finalizado! As quilometragens foram atualizadas nos cards.");
+                    }
+                });
+
+            } catch (error) {
+                console.error("Erro no Google Maps API:", error);
+                alert("Falha ao calcular rota.");
+            } finally {
+                this.calculandoKM = false;
+            }
         }
     }
 }).mount('#app');
