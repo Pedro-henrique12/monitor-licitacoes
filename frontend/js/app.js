@@ -178,41 +178,53 @@ createApp({
         
         renderizarEstados() {
             if (!this.geoJsonEstados || !this.mapa) return;
-            
-            // Se já existir uma camada, removemos para não duplicar
-            if (this.camadaEstados) this.mapa.removeLayer(this.camadaEstados);
-
             this.camadaEstados = markRaw(L.geoJSON(this.geoJsonEstados, {
-                style: {
-                    color: '#ffffff', // Branco puro para os contornos
-                    weight: 1.5,      // Espessura da linha
-                    fillOpacity: 0,   // Sem preenchimento para não cobrir as cores das cidades
-                    interactive: false // Para não atrapalhar o clique nos municípios
-                }
+                style: { color: '#ffffff', weight: 1.5, fillOpacity: 0, interactive: false }
             })).addTo(this.mapa);
-
-            // Garante que as linhas dos estados fiquem na frente de tudo
-            this.camadaEstados.bringToFront();
         },
+
         renderizarPoligonos() {
             if (!this.geoJsonDados || !this.mapa) return;
             if (this.camadaGeoJson) this.mapa.removeLayer(this.camadaGeoJson);
-            const mapDados = {}; this.dadosFiltrados.forEach(d => { if(d.cod_ibge) mapDados[String(d.cod_ibge).substring(0,6)] = d; });
+
+            const mapDados = {};
+            this.dadosFiltrados.forEach(d => { 
+                if(d.cod_ibge) {
+                    const id6 = String(d.cod_ibge).substring(0,6);
+                    mapDados[id6] = d; 
+                }
+            });
+
             this.camadaGeoJson = markRaw(L.geoJSON(this.geoJsonDados, {
-                style: (f) => ({ fillColor: CORES_SISTEMAS[mapDados[String(f.id || f.properties.id || f.properties.cod_ibge).substring(0,6)]?.sistema_fonte] || '#444', weight: 0.5, color: '#111', fillOpacity: 0.9 }),
-                onEachFeature: (f, l) => {
-                    const d = mapDados[String(f.id || f.properties.id || f.properties.cod_ibge).substring(0,6)];
-                    l.bindPopup(`<div style="color: #222;"><b>${d ? d.cidade_norm : f.properties.name}</b><br>Plataforma: ${d ? d.sistema_fonte : 'Sem Dados'}</div>`);
+                style: (feature) => {
+                    const rawId = feature.id || feature.properties.id || feature.properties.cod_ibge || feature.properties.GEOCODIGO;
+                    const cod6 = String(rawId).substring(0,6);
+                    const dadosCidade = mapDados[cod6];
+                    
+                    let cor = CORES_SISTEMAS["Sem Dados no PNCP"];
+                    if (dadosCidade && CORES_SISTEMAS[dadosCidade.sistema_fonte]) {
+                        cor = CORES_SISTEMAS[dadosCidade.sistema_fonte];
+                    }
+                    
+                    return { fillColor: cor, weight: 0.5, color: '#111', opacity: 0.8, fillOpacity: 0.9 };
+                },
+                onEachFeature: (feature, layer) => {
+                    const rawId = feature.id || feature.properties.id || feature.properties.cod_ibge || feature.properties.GEOCODIGO;
+                    const cod6 = String(rawId).substring(0,6);
+                    const dadosCidade = mapDados[cod6];
+                    
+                    if (dadosCidade) {
+                        layer.bindPopup(`<div style="color: #222;"><b>${dadosCidade.cidade_norm} - ${dadosCidade.uf}</b><br>Plataforma: <b>${dadosCidade.sistema_fonte}</b><br>Status: ${dadosCidade.status_municipio}</div>`);
+                    } else {
+                        layer.bindPopup(`<div style="color: #222;"><b>${feature.properties.name || 'Município'}</b><br>Sem Dados no PNCP</div>`);
+                    }
                 }
             })).addTo(this.mapa);
-            
+
             if (!this.ufsSelecionadas.includes('Todos') && this.camadaGeoJson.getBounds().isValid()) {
-                // Adicionamos um padding de 20px para o zoom não ficar "esmagado" nas bordas
-                this.mapa.fitBounds(this.camadaGeoJson.getBounds(), { padding: [20, 20] });
+                this.mapa.fitBounds(this.camadaGeoJson.getBounds());
             }
-            if (this.camadaEstados) {
-                this.camadaEstados.bringToFront();
-            }
+            if (this.camadaEstados) this.camadaEstados.bringToFront();
         },
         atualizarDashboards() {
             if (!document.getElementById('chartPlataformas')) return;
