@@ -90,7 +90,21 @@
                         </li>
                     </ul>
                 </div>
-
+                <div class="mb-3 dropdown">
+                    <label class="form-label mb-1">Município:</label>
+                    <button class="form-select form-select-sm bg-dark-panel text-light dropdown-toggle text-start border-secondary" 
+                            type="button" data-bs-toggle="dropdown" aria-expanded="false"
+                            :disabled="ufsSelecionadas.includes('Todos') || ufsSelecionadas.length > 1">
+                        {{ cidadeSelecionada === 'Todos' ? 'Todas as Cidades' : cidadeSelecionada }}
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-dark shadow border-secondary p-2 w-100">
+                        <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary mb-2" placeholder="🔍 Buscar cidade..." v-model="buscaCidade" @click.stop>
+                        <ul class="list-unstyled mb-0" style="max-height: 220px; overflow-y: auto;">
+                            <li><a class="dropdown-item rounded fw-bold text-warning" href="#" @click.prevent="selecionarCidade('Todos')">🌎 Todas as Cidades</a></li>
+                            <li v-for="cidade in cidadesFiltradasNaBusca" :key="cidade"><a class="dropdown-item rounded" href="#" @click.prevent="selecionarCidade(cidade)">{{ cidade }}</a></li>
+                            <li v-if="cidadesFiltradasNaBusca.length === 0" class="text-muted small px-2 py-1 text-center">Nenhum município encontrado.</li>
+                        </ul>
+                    </div>
                 <div v-if="abaAtiva === 'radar'" class="mt-2 mb-3 p-2 rounded bg-dark-main border-dark-subtle border">
                     <h6 class="text-secondary small fw-bold mb-2">Filtros Avançados Radar</h6>
                     <label class="form-label small mb-1">Tipo de Órgão:</label>
@@ -113,21 +127,7 @@
                 </div>
 
                 <!-- O FILTRO DE MUNICÍPIO AGORA FICA VISÍVEL NO RADAR TAMBÉM -->
-                <div class="mb-3 dropdown">
-                    <label class="form-label mb-1">Município:</label>
-                    <button class="form-select form-select-sm bg-dark-panel text-light dropdown-toggle text-start border-secondary" 
-                            type="button" data-bs-toggle="dropdown" aria-expanded="false"
-                            :disabled="ufsSelecionadas.includes('Todos') || ufsSelecionadas.length > 1">
-                        {{ cidadeSelecionada === 'Todos' ? 'Todas as Cidades' : cidadeSelecionada }}
-                    </button>
-                    <div class="dropdown-menu dropdown-menu-dark shadow border-secondary p-2 w-100">
-                        <input type="text" class="form-control form-control-sm bg-dark text-light border-secondary mb-2" placeholder="🔍 Buscar cidade..." v-model="buscaCidade" @click.stop>
-                        <ul class="list-unstyled mb-0" style="max-height: 220px; overflow-y: auto;">
-                            <li><a class="dropdown-item rounded fw-bold text-warning" href="#" @click.prevent="selecionarCidade('Todos')">🌎 Todas as Cidades</a></li>
-                            <li v-for="cidade in cidadesFiltradasNaBusca" :key="cidade"><a class="dropdown-item rounded" href="#" @click.prevent="selecionarCidade(cidade)">{{ cidade }}</a></li>
-                            <li v-if="cidadesFiltradasNaBusca.length === 0" class="text-muted small px-2 py-1 text-center">Nenhum município encontrado.</li>
-                        </ul>
-                    </div>
+                
                     <small class="text-muted" style="font-size: 10px;" v-if="ufsSelecionadas.length > 1 && !ufsSelecionadas.includes('Todos')">
                         *Selecione apenas 1 estado para habilitar.
                     </small>
