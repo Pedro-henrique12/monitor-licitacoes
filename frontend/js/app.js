@@ -489,20 +489,45 @@ createApp({
                 doc.text(`${i+1}. Cidade: ${p.municipio} - ${p.uf}`, 20, y);
                 y += 7;
                 
+                // KM da parada
                 doc.setFont(undefined, 'normal');
-                doc.text(`KM Estrada: ${p.km_estrada} | KM Cidade: ${p.km_cidade} | Total: ${p.km_total} km`, 25, y);
+                doc.text(`KM Estrada: ${p.km_estrada} | KM Cidade: ${p.km_cidade} | KM TOTAL DA PARADA: ${p.km_total} km`, 25, y);
                 y += 5;
-                doc.text(`Custos Estimados: Hospedagem R$ ${p.vr_hospedagem} | Jantar R$ ${p.vr_jantar}`, 25, y);
+                
+                // Custo da Parada
+                const totalCustoParada = (parseFloat(p.vr_hospedagem || 0) + parseFloat(p.vr_jantar || 0)).toFixed(2);
+                doc.text(`Custos: Hosped R$ ${p.vr_hospedagem} | Jantar R$ ${p.vr_jantar} | CUSTO TOTAL DA PARADA: R$ ${totalCustoParada}`, 25, y);
                 y += 7;
                 
+                // Órgãos
                 doc.text("Órgãos a visitar:", 25, y);
                 y += 5;
                 p.orgaosSelecionados.forEach(o => {
                     doc.text(`- ${o.nome_orgao} (Portal: ${o.sistema_fonte})`, 30, y);
                     y += 5;
                 });
-                y += 10;
+                y += 10; // Espaço para a próxima cidade
             });
+            
+            // --- RESUMO GERAL DA ROTA NO FINAL ---
+            // Verifica se precisa ir para a próxima página para imprimir o total
+            if (y > 260) { doc.addPage(); y = 20; }
+            
+            y += 5;
+            doc.setLineWidth(0.5);
+            doc.line(20, y, 190, y); // Linha divisória
+            y += 8;
+            
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'bold');
+            doc.text(`RESUMO GERAL DA VIAGEM:`, 20, y);
+            y += 7;
+            
+            doc.setFontSize(11);
+            doc.setFont(undefined, 'normal');
+            doc.text(`Quilometragem Total da Rota: ${this.calcularTotalKM} km`, 20, y);
+            y += 6;
+            doc.text(`Custo Estimado Total (Hospedagem + Jantar): R$ ${this.calcularTotalCustos}`, 20, y);
             
             doc.save(`Rota_Licitanet_${new Date().getTime()}.pdf`);
         }
