@@ -177,7 +177,22 @@ createApp({
         },
         
         renderizarEstados() {
-            if (this.geoJsonEstados && this.mapa) L.geoJSON(this.geoJsonEstados, { style: { color: '#ffffff', weight: 1.5, fillOpacity: 0, interactive: false } }).addTo(this.mapa);
+            if (!this.geoJsonEstados || !this.mapa) return;
+            
+            // Se já existir uma camada, removemos para não duplicar
+            if (this.camadaEstados) this.mapa.removeLayer(this.camadaEstados);
+
+            this.camadaEstados = markRaw(L.geoJSON(this.geoJsonEstados, {
+                style: {
+                    color: '#ffffff', // Branco puro para os contornos
+                    weight: 1.5,      // Espessura da linha
+                    fillOpacity: 0,   // Sem preenchimento para não cobrir as cores das cidades
+                    interactive: false // Para não atrapalhar o clique nos municípios
+                }
+            })).addTo(this.mapa);
+
+            // Garante que as linhas dos estados fiquem na frente de tudo
+            this.camadaEstados.bringToFront();
         },
         renderizarPoligonos() {
             if (!this.geoJsonDados || !this.mapa) return;
@@ -192,7 +207,11 @@ createApp({
             })).addTo(this.mapa);
             
             if (!this.ufsSelecionadas.includes('Todos') && this.camadaGeoJson.getBounds().isValid()) {
-                this.mapa.fitBounds(this.camadaGeoJson.getBounds());
+                // Adicionamos um padding de 20px para o zoom não ficar "esmagado" nas bordas
+                this.mapa.fitBounds(this.camadaGeoJson.getBounds(), { padding: [20, 20] });
+            }
+            if (this.camadaEstados) {
+                this.camadaEstados.bringToFront();
             }
         },
         atualizarDashboards() {
