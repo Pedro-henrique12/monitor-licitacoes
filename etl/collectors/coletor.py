@@ -14,9 +14,9 @@ engine = create_engine(MYSQL_STR)
 
 # --- Configuração de Coleta ---
 INTERVALO_DIAS = 6
-ESTADOS = ['AC','AL','AP','AM','BA','ES','CE','GO','MA','MT','MS','MG','PA','PB','PE','PR','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'] 
+ESTADOS = ['MS','MG','PA','PB','PE','PR','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'] 
 MODALIDADES = [6, 7, 8, 9, 4, 5] # 4=Concorrência, 6=Pregão, 8=Dispensa
-#'AC','AL','AP','AM','BA','ES','CE','GO','MA','MT','MS',
+#'AC','AL','AP','AM','BA','ES','CE','GO','MA','MT',
 
 # Dicionário para traduzir o ID no nome real da modalidade
 MAPA_MODALIDADES = {
@@ -180,4 +180,4 @@ def coletar_por_lotes(data_inicio_str, data_fim_str):
             time.sleep(0.5)
 
 if __name__ == "__main__":
-    coletar_por_lotes("20260428", "20260503")
+    coletar_por_lotes("20260504", "20260504")
