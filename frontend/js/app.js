@@ -282,13 +282,12 @@ createApp({
             this.carregandoIA = true;
             
             try {
-                // Instrução mais direta para evitar que a IA se perca
-                const instrucao = `Você é um assistente logístico. Extraia as cidades do texto e retorne APENAS um array JSON. 
+                const instrucao = `Você é um assistente logístico. Extraia as cidades do texto e retorne APENAS um array JSON puro. 
                 Formato: [{"municipio": "Nome da Cidade", "uf": "Sigla"}]
                 Texto: ${this.promptGestor}`;
 
-                // Mudamos para o endpoint v1 que é o padrão atual
-                const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+                // MUDANÇA AQUI: Voltamos para o v1beta que tem melhor suporte para o 1.5-flash atualmente
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 
                 const response = await fetch(url, {
                     method: 'POST',
@@ -300,35 +299,32 @@ createApp({
                     })
                 });
 
-                // Se o Google responder erro (400, 403, 429...), vamos ler o porquê
                 if (!response.ok) {
                     const erroDetalhado = await response.json();
-                    console.error("ERRO DIRETO DO GOOGLE:", erroDetalhado);
-                    throw new Error(erroDetalhado.error?.message || "Erro desconhecido na API do Google");
+                    console.error("ERRO DO GOOGLE:", erroDetalhado);
+                    // Se der erro 404 de novo, ele vai te avisar exatamente o que é
+                    throw new Error(erroDetalhado.error?.message || "Erro na API do Google");
                 }
 
                 const data = await response.json();
                 
-                // Verifica se a estrutura da resposta existe
                 if (!data.candidates || !data.candidates[0].content.parts[0].text) {
-                    throw new Error("A IA respondeu, mas o conteúdo veio vazio.");
+                    throw new Error("A IA não retornou conteúdo.");
                 }
 
                 let textoIA = data.candidates[0].content.parts[0].text;
                 
-                // Limpeza para garantir que pegamos apenas o que está entre [ ]
+                // Limpeza para pegar o JSON dentro de colchetes [ ]
                 const jsonMatch = textoIA.match(/\[[\s\S]*\]/);
                 if (!jsonMatch) {
-                    console.log("Texto bruto da IA:", textoIA);
-                    throw new Error("A IA não gerou uma lista de cidades válida.");
+                    throw new Error("Formato de lista inválido retornado pela IA.");
                 }
                 
                 const cidadesExtraidas = JSON.parse(jsonMatch[0]);
 
-                // Adiciona as cidades na rota
+                // Alimenta o roteiro
                 for (const item of cidadesExtraidas) {
                     this.planejadorUF = item.uf.toUpperCase();
-                    // Importante: selecionarCidadePlanejador deve existir no seu methods
                     this.selecionarCidadePlanejador(item.municipio);
                     if (this.novaCidadeRota.municipio) {
                         this.adicionarCidadeARota();
@@ -336,11 +332,11 @@ createApp({
                 }
                 
                 this.promptGestor = ''; 
-                alert(`✨ Roteiro gerado! Adicionamos ${cidadesExtraidas.length} paradas.`);
+                alert(`✨ Sucesso! Adicionamos ${cidadesExtraidas.length} paradas ao seu roteiro.`);
 
             } catch (error) {
-                console.error("DETALHE DO ERRO NO CONSOLE:", error);
-                alert("Ops! " + error.message);
+                console.error("DETALHE DO ERRO:", error);
+                alert("Erro: " + error.message);
             } finally {
                 this.carregandoIA = false;
             }
