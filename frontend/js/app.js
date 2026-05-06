@@ -183,6 +183,13 @@ createApp({
             })).addTo(this.mapa);
         },
 
+        renderizarEstados() {
+            if (!this.geoJsonEstados || !this.mapa) return;
+            this.camadaEstados = markRaw(L.geoJSON(this.geoJsonEstados, {
+                style: { color: '#ffffff', weight: 1.5, fillOpacity: 0, interactive: false }
+            })).addTo(this.mapa);
+        },
+
         renderizarPoligonos() {
             if (!this.geoJsonDados || !this.mapa) return;
             if (this.camadaGeoJson) this.mapa.removeLayer(this.camadaGeoJson);
