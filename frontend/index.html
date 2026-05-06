@@ -18,6 +18,8 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- 1. BIBLIOTECA DE PDF ADICIONADA AQUI -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="bg-dark text-light position-relative">
@@ -64,9 +66,12 @@
                         <li class="nav-item">
                             <a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'historico', 'text-secondary': abaAtiva !== 'historico' }" @click="mudarAba('historico')" href="#" style="cursor: pointer;">📜 Histórico</a>
                         </li>
-                        <!-- NOVO BOTÃO DA IA -->
                         <li class="nav-item">
                             <a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'copiloto', 'text-secondary': abaAtiva !== 'copiloto' }" @click="mudarAba('copiloto')" href="#" style="cursor: pointer;">🤖 Copiloto IA</a>
+                        </li>
+                        <!-- 2. NOVO BOTÃO DO PLANEJADOR ADICIONADO AQUI -->
+                        <li class="nav-item">
+                            <a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-info': abaAtiva === 'planejador', 'text-secondary': abaAtiva !== 'planejador' }" @click="mudarAba('planejador')" href="#" style="cursor: pointer;">✈️ Planejador</a>
                         </li>
                     </ul>
                 </div>
@@ -75,7 +80,8 @@
 
         <div class="d-flex flex-grow-1 overflow-hidden z-1">
             
-            <div class="sidebar p-3 shadow-sm d-flex flex-column z-2">
+            <!-- 3. v-show ADICIONADO AQUI PARA ESCONDER O MENU LATERAL QUANDO FOR PLANEJAR A ROTA -->
+            <div class="sidebar p-3 shadow-sm d-flex flex-column z-2" v-show="abaAtiva !== 'planejador'">
                 <h6 class="mb-3 text-muted border-bottom border-dark-subtle pb-2 fw-bold"> Filtros Globais</h6>
                 
                 <div class="mb-3 dropdown">
@@ -335,7 +341,6 @@
                     </div>
                 </div>
 
-                <!-- ABA 5: COPILOTO IA (CROSS-SELL) -->
                 <div v-if="abaAtiva === 'copiloto'" class="p-4 h-100 overflow-auto w-100 bg-dark-main">
                     <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-dark-subtle pb-3">
                         <div>
@@ -375,7 +380,7 @@
                                     
                                     <h6 class="text-muted small fw-bold mb-3">🧠 Dossiê Estratégico (Gemini):</h6>
                                     
-                                    <!-- TEXTO FORMATADO PELA IA (A tag <pre> antiga foi removida daqui) -->
+                                    <!-- TEXTO FORMATADO PELA IA -->
                                     <div class="text-light fw-light lh-base pb-2" style="font-size: 13px;" v-html="formatarTextoIA(alvo.Dossie_IA)"></div>
                                 </div>
                                 
@@ -383,6 +388,89 @@
                                     <button class="btn btn-sm w-100 fw-bold text-white" style="background-color: #a855f7; border-color: #a855f7;">
                                         ✅ Visita Agendada
                                     </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. ABA DO PLANEJADOR ADICIONADA AQUI NO FINAL (Sem alterar as de cima) -->
+                <div v-if="abaAtiva === 'planejador'" class="p-4 h-100 overflow-auto w-100 bg-dark-main">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4 class="fw-bold text-white mb-0">✈️ Planejador de Rotas e Custos</h4>
+                        <button class="btn btn-outline-danger btn-sm" @click="limparPlanejamento">Reiniciar Rota</button>
+                    </div>
+
+                    <div class="row g-4">
+                        <!-- FORMULÁRIO DE CIDADE -->
+                        <div class="col-md-5">
+                            <div class="card bg-dark-panel border-secondary p-4 shadow-lg">
+                                <h6 class="text-info border-bottom border-secondary pb-2 mb-3">📍 Próxima Parada</h6>
+                                
+                                <label class="small text-muted">Selecione a Cidade:</label>
+                                <select class="form-select form-select-sm bg-dark text-white border-secondary mb-3" v-model="novaCidadeRota.municipio" @change="carregarOrgaosParaRota">
+                                    <option value="" disabled>Escolha um município...</option>
+                                    <option v-for="c in listaCidadesFull" :key="c" :value="c">{{ c }}</option>
+                                </select>
+
+                                <div v-if="novaCidadeRota.orgaosDisponiveis.length > 0" class="mb-3">
+                                    <label class="small text-muted d-block mb-2">Órgãos e Portais detectados:</label>
+                                    <div class="bg-dark p-2 rounded border border-secondary" style="max-height: 180px; overflow-y: auto;">
+                                        <div v-for="o in novaCidadeRota.orgaosDisponiveis" :key="o.id_pncp" class="form-check mb-1">
+                                            <input class="form-check-input" type="checkbox" :value="o" v-model="novaCidadeRota.orgaosSelecionados" :id="'check_'+o.id_pncp">
+                                            <label class="form-check-label small text-light" :for="'check_'+o.id_pncp">
+                                                {{ o.nome_orgao }} <br>
+                                                <span class="badge" :style="{ backgroundColor: coresSistemas[o.sistema_fonte] || '#666', fontSize: '9px' }">{{ o.sistema_fonte }}</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row g-2">
+                                    <div class="col-6"><label class="small text-muted">KM Estrada:</label><input type="number" class="form-control form-control-sm bg-dark text-white border-secondary" v-model="novaCidadeRota.km_estrada"></div>
+                                    <div class="col-6"><label class="small text-muted">KM Cidade:</label><input type="number" class="form-control form-control-sm bg-dark text-white border-secondary" v-model="novaCidadeRota.km_cidade"></div>
+                                    <div class="col-6"><label class="small text-muted">Hospedagem (R$):</label><input type="number" class="form-control form-control-sm bg-dark text-white border-secondary" v-model="novaCidadeRota.vr_hospedagem"></div>
+                                    <div class="col-6"><label class="small text-muted">Jantar (R$):</label><input type="number" class="form-control form-control-sm bg-dark text-white border-secondary" v-model="novaCidadeRota.vr_jantar"></div>
+                                </div>
+
+                                <button class="btn btn-info w-100 mt-4 fw-bold" @click="adicionarCidadeARota" :disabled="!novaCidadeRota.municipio">➕ Adicionar à Rota</button>
+                            </div>
+                        </div>
+
+                        <!-- LISTA DA ROTA -->
+                        <div class="col-md-7">
+                            <div class="card bg-dark-panel border-secondary p-4 h-100 shadow-lg d-flex flex-column">
+                                <h6 class="text-success border-bottom border-secondary pb-2 mb-3">📋 Itinerário da Viagem</h6>
+                                
+                                <div v-if="rotaEmPlanejamento.passos.length === 0" class="text-center text-muted my-auto">
+                                    <h1 class="display-1 opacity-25">🗺️</h1>
+                                    <p>Nenhuma cidade adicionada ao roteiro ainda.</p>
+                                </div>
+
+                                <div class="flex-grow-1 overflow-auto pe-2">
+                                    <div v-for="(p, i) in rotaEmPlanejamento.passos" :key="i" class="mb-4 border-start border-success border-3 ps-3 position-relative">
+                                        <div class="position-absolute bg-success rounded-circle" style="width: 10px; height: 10px; left: -7px; top: 5px;"></div>
+                                        <div class="d-flex justify-content-between">
+                                            <h6 class="text-white fw-bold mb-1">{{ p.municipio }}</h6>
+                                            <button class="btn btn-link btn-sm text-danger p-0" @click="removerPasso(i)">Remover</button>
+                                        </div>
+                                        <div class="small text-muted mb-2">
+                                            KM: <b>{{ p.km_total }}</b> | Custos: <b>R$ {{ (parseFloat(p.vr_hospedagem) + parseFloat(p.vr_jantar)).toFixed(2) }}</b>
+                                        </div>
+                                        <div class="bg-dark p-2 rounded border border-secondary-subtle">
+                                            <div v-for="org in p.orgaosSelecionados" :key="org.id_pncp" class="small text-info">
+                                                🎯 {{ org.nome_orgao }} ({{ org.sistema_fonte }})
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-4 pt-3 border-top border-secondary">
+                                    <div class="d-flex justify-content-between mb-3">
+                                        <span>Total de KMs: <b>{{ calcularTotalKM }} km</b></span>
+                                        <span class="text-success">Custo Total Est.: <b>R$ {{ calcularTotalCustos }}</b></span>
+                                    </div>
+                                    <button v-if="rotaEmPlanejamento.passos.length > 0" class="btn btn-success w-100 fw-bold" @click="gerarRelatorioPDF">📄 Gerar Relatório de Viagem (PDF)</button>
                                 </div>
                             </div>
                         </div>

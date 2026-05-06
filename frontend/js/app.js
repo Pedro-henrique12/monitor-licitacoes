@@ -6,7 +6,7 @@ const CORES_SISTEMAS = {
     "Bnc - Bolsa Nacional": "#87CEEB", "Compras Br": "#00CED1",
     "Licitar Digital": "#008000", "Licita Mais": "#32CD32", "Conlicitacao": "#2E8B57",
     "Portal de Compras Públicas": "#8A2BE2", "Start Gov": "#8B4513",
-    "Sem Dados no PNCP": "#444444", // Escureci o Sem Dados para combinar
+    "Sem Dados no PNCP": "#444444", 
     "Outros": "#A9A9A9"  
 };
 
@@ -16,14 +16,29 @@ createApp({
     data() {
         return {
             abaAtiva: 'mapa', 
-            dadosIA: [], // <-- VARIAVEL DA IA ADICIONADA AQUI
+            dadosIA: [], // Dossiês da Inteligência Artificial
             dadosMercado: [], dadosFiltrados: [], alertas: [], alertasFiltrados: [], geoJsonDados: null,
-            dadosHistorico: [], // Guarda o histórico de licitações
+            dadosHistorico: [], 
             mapa: null, camadaGeoJson: null, camadaEstados: null, geoJsonEstados: null, graficoPlat: null, graficoConc: null,
             ufsSelecionadas: ['Todos'], cidadeSelecionada: 'Todos', buscaCidade: '', 
             listaUFs: [], listaCidades: [], coresSistemas: CORES_SISTEMAS,
             dadosRadar: [], dadosRadarFiltrados: [], radarTipoOrgao: 'Todos', radarMeses: 2, radarPlataforma: 'Todas', listaPlataformasRadar: [],
-            alertasExpandidos: false, paginaAtualRadar: 1, itensPorPagina: 50
+            alertasExpandidos: false, paginaAtualRadar: 1, itensPorPagina: 50,
+            
+            // --- VARIÁVEIS DO PLANEJADOR DE ROTAS ---
+            rotaEmPlanejamento: {
+                passos: []
+            },
+            novaCidadeRota: {
+                municipio: '',
+                km_estrada: 0,
+                km_cidade: 0,
+                vr_hospedagem: 0,
+                vr_jantar: 0,
+                orgaosDisponiveis: [],
+                orgaosSelecionados: []
+            },
+            listaCidadesFull: [] // Lista de todas as cidades disponíveis para seleção no planejador
         }
     },
     computed: {
@@ -62,21 +77,24 @@ createApp({
             return Math.ceil(this.dadosRadarFiltrados.length / this.itensPorPagina) || 1;
         },
         historicoFiltrado() {
-            // Se não houver exata 1 cidade de 1 estado selecionada, retorna vazio
             if (this.cidadeSelecionada === 'Todos' || this.ufsSelecionadas.includes('Todos') || this.ufsSelecionadas.length > 1) {
                 return {}; 
             }
-            
-            // Filtra o JSON de histórico para pegar apenas a cidade atual
             const dadosCidade = this.dadosHistorico.filter(h => h.uf === this.ufsSelecionadas[0] && h.municipio === this.cidadeSelecionada);
-            
-            // Agrupa os dados pelo nome do órgão
             const agrupado = {};
             dadosCidade.forEach(item => {
                 if (!agrupado[item.orgao]) agrupado[item.orgao] = [];
                 agrupado[item.orgao].push(item);
             });
             return agrupado;
+        },
+        
+        // --- COMPUTED DO PLANEJADOR DE ROTAS ---
+        calcularTotalKM() {
+            return this.rotaEmPlanejamento.passos.reduce((acc, p) => acc + parseFloat(p.km_total || 0), 0);
+        },
+        calcularTotalCustos() {
+            return this.rotaEmPlanejamento.passos.reduce((acc, p) => acc + parseFloat(p.vr_hospedagem || 0) + parseFloat(p.vr_jantar || 0), 0).toFixed(2);
         }
     },
     async mounted() {
@@ -108,41 +126,37 @@ createApp({
                     this.listaPlataformasRadar = plats.sort();
                 }
 
-                // FETCH ATUALIZADO PARA PUXAR O ARQUIVO DA IA (resIA)
+                // Busca todos os arquivos de dados em paralelo
                 const [resAlertas, resDados, resGeo, resEstados, resHist, resIA] = await Promise.all([
                     fetch('../data/output/alertas.json'), 
                     fetch('../data/output/dados_mercado.json'), 
                     fetch('../data/geo/municipios_ibge.json/geojs-100-mun.json'),
                     fetch('https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson'),
                     fetch('../data/output/historico.json'),
-                    fetch('../data/output/rotas_ia.json') // <-- NOVO ARQUIVO AQUI
+                    fetch('../data/output/rotas_ia.json')
                 ]);
                 
                 if (resAlertas.ok) {
                     this.alertas = await resAlertas.json();
                     this.alertasFiltrados = this.alertas; 
                 }
-                if (resDados.ok) this.dadosMercado = await resDados.json();
                 
-                if (resGeo.ok) {
-                    this.geoJsonDados = markRaw(await resGeo.json());
-                } else {
-                    console.error("❌ Erro ao carregar o arquivo do mapa.");
+                if (resDados.ok) {
+                    this.dadosMercado = await resDados.json();
+                    // Alimenta a lista completa de cidades para o Planejador
+                    this.listaCidadesFull = [...new Set(this.dadosMercado.map(d => d.cidade_norm))].sort();
                 }
+                
+                if (resGeo.ok) this.geoJsonDados = markRaw(await resGeo.json());
                 
                 if (resEstados.ok) {
                     this.geoJsonEstados = markRaw(await resEstados.json());
                     this.renderizarEstados();
                 }
 
-                if (resHist && resHist.ok) {
-                    this.dadosHistorico = await resHist.json();
-                }
+                if (resHist && resHist.ok) this.dadosHistorico = await resHist.json();
                 
-                // SALVA OS DADOS DA IA NO VUE
-                if (resIA && resIA.ok) {
-                    this.dadosIA = await resIA.json();
-                }
+                if (resIA && resIA.ok) this.dadosIA = await resIA.json();
 
                 this.prepararFiltros();
                 this.filtrarDados(); 
@@ -298,22 +312,7 @@ createApp({
                 options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } } }
             }));
         },
-        formatarTextoIA(texto) {
-            if (!texto) return '';
-            
-            // 1. Transforma os **textos em negrito** da IA em tags <strong> amarelas
-            let formatado = texto.replace(/\*\*(.*?)\*\*/g, '<strong class="text-warning">$1</strong>');
-            
-            // 2. Transforma os asteriscos de lista (* ) em quebra de linha com um ícone de alvo
-            formatado = formatado.replace(/\n?\s*\*\s/g, '<br><br>🎯 ');
-            
-            // 3. Remove a quebra de linha extra no começo (se houver) para o card ficar alinhado
-            if (formatado.startsWith('<br><br>')) {
-                formatado = formatado.substring(8);
-            }
-            
-            return formatado;
-        },
+
         baixarRelatorioRadar() {
             if (this.dadosRadarFiltrados.length === 0) return;
             const ws = XLSX.utils.json_to_sheet(this.dadosRadarFiltrados);
@@ -347,8 +346,93 @@ createApp({
                 return `https://pncp.gov.br/app/editais/${cnpj}/${ano}/${numero}`;
             } catch (e) { return '#'; }
         },
+        
         abrirModalAlertas() { this.alertasExpandidos = true; },
         fecharModalAlertas() { this.alertasExpandidos = false; },
-        mudarPagina(p) { if (p >= 1 && p <= this.totalPaginasRadar) this.paginaAtualRadar = p; }
+        mudarPagina(p) { if (p >= 1 && p <= this.totalPaginasRadar) this.paginaAtualRadar = p; },
+
+        // --- FUNÇÃO PARA FORMATAR O TEXTO DA INTELIGÊNCIA ARTIFICIAL ---
+        formatarTextoIA(texto) {
+            if (!texto) return '';
+            let formatado = texto.replace(/\*\*(.*?)\*\*/g, '<strong class="text-warning">$1</strong>');
+            formatado = formatado.replace(/\n?\s*\*\s/g, '<br><br>🎯 ');
+            if (formatado.startsWith('<br><br>')) {
+                formatado = formatado.substring(8);
+            }
+            return formatado;
+        },
+
+        // --- MÉTODOS DO PLANEJADOR DE ROTAS ---
+        async carregarOrgaosParaRota() {
+            if (!this.novaCidadeRota.municipio) return;
+            // Busca no dadosMercado os órgãos daquela cidade
+            this.novaCidadeRota.orgaosDisponiveis = this.dadosMercado.filter(d => 
+                d.cidade_norm === this.novaCidadeRota.municipio
+            );
+            this.novaCidadeRota.orgaosSelecionados = [];
+        },
+        
+        adicionarCidadeARota() {
+            const p = this.novaCidadeRota;
+            this.rotaEmPlanejamento.passos.push({
+                municipio: p.municipio,
+                km_estrada: p.km_estrada,
+                km_cidade: p.km_cidade,
+                km_total: parseFloat(p.km_estrada) + parseFloat(p.km_cidade),
+                vr_hospedagem: p.vr_hospedagem,
+                vr_jantar: p.vr_jantar,
+                orgaosSelecionados: [...p.orgaosSelecionados]
+            });
+            // Limpa o formulário para a próxima cidade
+            this.novaCidadeRota = { municipio: '', km_estrada: 0, km_cidade: 0, vr_hospedagem: 0, vr_jantar: 0, orgaosDisponiveis: [], orgaosSelecionados: [] };
+        },
+        
+        removerPasso(index) {
+            this.rotaEmPlanejamento.passos.splice(index, 1);
+        },
+        
+        limparPlanejamento() {
+            if(confirm("Deseja realmente limpar toda a rota?")) {
+                this.rotaEmPlanejamento.passos = [];
+            }
+        },
+        
+        async gerarRelatorioPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Título
+            doc.setFontSize(18);
+            doc.text("Relatório de Planejamento de Viagem - Licitanet", 105, 20, { align: 'center' });
+            
+            doc.setFontSize(10);
+            doc.text(`Gerado em: ${new Date().toLocaleString()}`, 105, 28, { align: 'center' });
+            
+            let y = 40;
+            
+            this.rotaEmPlanejamento.passos.forEach((p, i) => {
+                if (y > 250) { doc.addPage(); y = 20; }
+                
+                doc.setFont(undefined, 'bold');
+                doc.text(`${i+1}. Cidade: ${p.municipio}`, 20, y);
+                y += 7;
+                
+                doc.setFont(undefined, 'normal');
+                doc.text(`KM Estrada: ${p.km_estrada} | KM Cidade: ${p.km_cidade} | Total: ${p.km_total} km`, 25, y);
+                y += 5;
+                doc.text(`Custos: Hospedagem R$ ${p.vr_hospedagem} | Jantar R$ ${p.vr_jantar}`, 25, y);
+                y += 7;
+                
+                doc.text("Órgãos a visitar:", 25, y);
+                y += 5;
+                p.orgaosSelecionados.forEach(o => {
+                    doc.text(`- ${o.nome_orgao} (Portal: ${o.sistema_fonte})`, 30, y);
+                    y += 5;
+                });
+                y += 10;
+            });
+            
+            doc.save(`Rota_Licitanet_${new Date().getTime()}.pdf`);
+        }
     }
 }).mount('#app');
