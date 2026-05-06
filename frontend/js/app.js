@@ -1,4 +1,4 @@
-const GEMINI_API_KEY = "AIzaSyB6v9_aP7v8sRz6Q1z-3o9KUjM0VjKc8U";
+const GEMINI_API_KEY = "AIzaSyDvXX-LuM23G6QKmivfnTgxUUfDz3oX6Q8";
 
 const { createApp, markRaw, nextTick } = Vue;
 
