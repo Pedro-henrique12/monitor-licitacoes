@@ -16,16 +16,16 @@ createApp({
     data() {
         return {
             abaAtiva: 'mapa', 
-            dadosIA: [], // Dossiês da Inteligência Artificial
+            dadosIA: [], // Variável isolada para os dossiês do Gemini
             dadosMercado: [], dadosFiltrados: [], alertas: [], alertasFiltrados: [], geoJsonDados: null,
-            dadosHistorico: [], 
+            dadosHistorico: [], // Histórico completo com o nome exato dos Órgãos
             mapa: null, camadaGeoJson: null, camadaEstados: null, geoJsonEstados: null, graficoPlat: null, graficoConc: null,
             ufsSelecionadas: ['Todos'], cidadeSelecionada: 'Todos', buscaCidade: '', 
             listaUFs: [], listaCidades: [], coresSistemas: CORES_SISTEMAS,
             dadosRadar: [], dadosRadarFiltrados: [], radarTipoOrgao: 'Todos', radarMeses: 2, radarPlataforma: 'Todas', listaPlataformasRadar: [],
             alertasExpandidos: false, paginaAtualRadar: 1, itensPorPagina: 50,
             
-            // --- VARIÁVEIS DO PLANEJADOR DE ROTAS ---
+            // --- VARIÁVEIS ISOLADAS DO PLANEJADOR DE ROTAS ---
             rotaEmPlanejamento: {
                 passos: []
             },
@@ -38,10 +38,11 @@ createApp({
                 orgaosDisponiveis: [],
                 orgaosSelecionados: []
             },
-            listaCidadesFull: [] // Lista de todas as cidades disponíveis para seleção no planejador
+            listaCidadesFull: [] // Usado apenas no dropdown do Planejador
         }
     },
     computed: {
+        // ... COMPUTE ANTIGOS (Não mexemos neles) ...
         cidadesFiltradasNaBusca() {
             if (!this.buscaCidade) return this.listaCidades;
             const termo = this.buscaCidade.toLowerCase();
@@ -89,7 +90,7 @@ createApp({
             return agrupado;
         },
         
-        // --- COMPUTED DO PLANEJADOR DE ROTAS ---
+        // --- CÁLCULOS AUTOMÁTICOS DO PLANEJADOR DE ROTAS ---
         calcularTotalKM() {
             return this.rotaEmPlanejamento.passos.reduce((acc, p) => acc + parseFloat(p.km_total || 0), 0);
         },
@@ -119,6 +120,7 @@ createApp({
         
         async carregarArquivos() {
             try {
+                // Traz o Radar
                 const resRadar = await fetch('../data/output/radar.json');
                 if (resRadar.ok) {
                     this.dadosRadar = await resRadar.json();
@@ -126,7 +128,7 @@ createApp({
                     this.listaPlataformasRadar = plats.sort();
                 }
 
-                // Busca todos os arquivos de dados em paralelo
+                // Traz os outros 6 arquivos em paralelo para super velocidade
                 const [resAlertas, resDados, resGeo, resEstados, resHist, resIA] = await Promise.all([
                     fetch('../data/output/alertas.json'), 
                     fetch('../data/output/dados_mercado.json'), 
@@ -143,7 +145,7 @@ createApp({
                 
                 if (resDados.ok) {
                     this.dadosMercado = await resDados.json();
-                    // Alimenta a lista completa de cidades para o Planejador
+                    // Alimenta a lista de cidades separada para uso no Planejador de Rota
                     this.listaCidadesFull = [...new Set(this.dadosMercado.map(d => d.cidade_norm))].sort();
                 }
                 
@@ -351,7 +353,7 @@ createApp({
         fecharModalAlertas() { this.alertasExpandidos = false; },
         mudarPagina(p) { if (p >= 1 && p <= this.totalPaginasRadar) this.paginaAtualRadar = p; },
 
-        // --- FUNÇÃO PARA FORMATAR O TEXTO DA INTELIGÊNCIA ARTIFICIAL ---
+        // --- FUNÇÃO ISOLADA DO COPILOTO IA ---
         formatarTextoIA(texto) {
             if (!texto) return '';
             let formatado = texto.replace(/\*\*(.*?)\*\*/g, '<strong class="text-warning">$1</strong>');
@@ -362,13 +364,27 @@ createApp({
             return formatado;
         },
 
-        // --- MÉTODOS DO PLANEJADOR DE ROTAS ---
+        // --- MÉTODOS ISOLADOS DO PLANEJADOR DE ROTAS ---
         async carregarOrgaosParaRota() {
             if (!this.novaCidadeRota.municipio) return;
-            // Busca no dadosMercado os órgãos daquela cidade
-            this.novaCidadeRota.orgaosDisponiveis = this.dadosMercado.filter(d => 
-                d.cidade_norm === this.novaCidadeRota.municipio
+            
+            // Busca no arquivo de HISTÓRICO os órgãos daquela cidade
+            const licitacoes = this.dadosHistorico.filter(d => 
+                d.municipio === this.novaCidadeRota.municipio
             );
+            
+            // Removemos as duplicatas para exibir o nome do órgão perfeitamente
+            const orgaosUnicos = {};
+            licitacoes.forEach(lic => {
+                if (!orgaosUnicos[lic.orgao]) {
+                    orgaosUnicos[lic.orgao] = {
+                        nome_orgao: lic.orgao, 
+                        sistema_fonte: lic.plataforma 
+                    };
+                }
+            });
+            
+            this.novaCidadeRota.orgaosDisponiveis = Object.values(orgaosUnicos);
             this.novaCidadeRota.orgaosSelecionados = [];
         },
         
@@ -383,7 +399,7 @@ createApp({
                 vr_jantar: p.vr_jantar,
                 orgaosSelecionados: [...p.orgaosSelecionados]
             });
-            // Limpa o formulário para a próxima cidade
+            // Reseta form local
             this.novaCidadeRota = { municipio: '', km_estrada: 0, km_cidade: 0, vr_hospedagem: 0, vr_jantar: 0, orgaosDisponiveis: [], orgaosSelecionados: [] };
         },
         
@@ -401,7 +417,6 @@ createApp({
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             
-            // Título
             doc.setFontSize(18);
             doc.text("Relatório de Planejamento de Viagem - Licitanet", 105, 20, { align: 'center' });
             

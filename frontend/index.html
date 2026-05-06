@@ -3,22 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitor de Licitações</title>
+    <title>Monitor de Licitações | Licitanet</title>
+    
     <script>
         const SENHA_CORRETA = "TESTE#2026"; 
         let tentativa = prompt("Acesso Restrito. Digite a senha do Radar:");
         if (tentativa !== SENHA_CORRETA) {
-            alert("Senha incorreta! Você será redirecionado.");
+            alert("Senha incorreta!");
             window.location.href = "https://www.google.com"; 
             document.write("<style>body { display:none !important; }</style>");
             window.stop();
         }
     </script>
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- 1. BIBLIOTECA DE PDF ADICIONADA AQUI -->
+    <!-- BIBLIOTECA PARA PDF (Gerador do Roteiro) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -26,6 +28,7 @@
 
     <div id="app" class="d-flex flex-column vh-100" v-cloak>
         
+        <!-- MODAL DE ALERTAS DA TELA DO MAPA -->
         <div v-if="alertasExpandidos" class="position-absolute top-0 start-0 w-100 h-100 z-3 d-flex justify-content-center align-items-start p-4" style="background: rgba(0,0,0,0.8); backdrop-filter: blur(4px);">
             <div class="card bg-dark-main w-75 shadow-lg border border-danger">
                 <div class="card-header d-flex justify-content-between align-items-center bg-danger text-white border-0">
@@ -47,32 +50,18 @@
             </div>
         </div>
 
+        <!-- NAVBAR -->
         <nav class="navbar navbar-expand-lg shadow-sm z-2 border-bottom border-dark-subtle" style="background-color: #11111a;">
             <div class="container-fluid">
-                <a class="navbar-brand" href="#">
-                    <img src="assets/logo_licitanet.jpeg" alt="Logo Licitanet" height="45" class="d-inline-block align-text-top">
-                </a>
-                <div class="collapse navbar-collapse" id="navbarNav">
+                <a class="navbar-brand" href="#"><img src="assets/logo_licitanet.jpeg" height="45"></a>
+                <div class="collapse navbar-collapse">
                     <ul class="navbar-nav ms-auto">
-                        <li class="nav-item">
-                            <a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'mapa', 'text-secondary': abaAtiva !== 'mapa' }" @click="mudarAba('mapa')" href="#" style="cursor: pointer;">🗺️ Mapa de Mercado</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'dashboards', 'text-secondary': abaAtiva !== 'dashboards' }" @click="mudarAba('dashboards')" href="#" style="cursor: pointer;">📈 Dashboards</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'radar', 'text-secondary': abaAtiva !== 'radar' }" @click="mudarAba('radar')" href="#" style="cursor: pointer;">🎯 Radar Comercial</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'historico', 'text-secondary': abaAtiva !== 'historico' }" @click="mudarAba('historico')" href="#" style="cursor: pointer;">📜 Histórico</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'copiloto', 'text-secondary': abaAtiva !== 'copiloto' }" @click="mudarAba('copiloto')" href="#" style="cursor: pointer;">🤖 Copiloto IA</a>
-                        </li>
-                        <!-- 2. NOVO BOTÃO DO PLANEJADOR ADICIONADO AQUI -->
-                        <li class="nav-item">
-                            <a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-info': abaAtiva === 'planejador', 'text-secondary': abaAtiva !== 'planejador' }" @click="mudarAba('planejador')" href="#" style="cursor: pointer;">✈️ Planejador</a>
-                        </li>
+                        <li class="nav-item"><a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'mapa', 'text-secondary': abaAtiva !== 'mapa' }" @click="mudarAba('mapa')" href="#" style="cursor: pointer;">🗺️ Mapa de Mercado</a></li>
+                        <li class="nav-item"><a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'dashboards', 'text-secondary': abaAtiva !== 'dashboards' }" @click="mudarAba('dashboards')" href="#" style="cursor: pointer;">📈 Dashboards</a></li>
+                        <li class="nav-item"><a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'radar', 'text-secondary': abaAtiva !== 'radar' }" @click="mudarAba('radar')" href="#" style="cursor: pointer;">🎯 Radar Comercial</a></li>
+                        <li class="nav-item"><a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'historico', 'text-secondary': abaAtiva !== 'historico' }" @click="mudarAba('historico')" href="#" style="cursor: pointer;">📜 Histórico</a></li>
+                        <li class="nav-item"><a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'copiloto', 'text-secondary': abaAtiva !== 'copiloto' }" @click="mudarAba('copiloto')" href="#" style="cursor: pointer;">🤖 Copiloto IA</a></li>
+                        <li class="nav-item"><a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-info': abaAtiva === 'planejador', 'text-secondary': abaAtiva !== 'planejador' }" @click="mudarAba('planejador')" href="#" style="cursor: pointer;">✈️ Planejador</a></li>
                     </ul>
                 </div>
             </div>
@@ -80,8 +69,8 @@
 
         <div class="d-flex flex-grow-1 overflow-hidden z-1">
             
-            <!-- 3. v-show ADICIONADO AQUI PARA ESCONDER O MENU LATERAL QUANDO FOR PLANEJAR A ROTA -->
-            <div class="sidebar p-3 shadow-sm d-flex flex-column z-2" v-show="abaAtiva !== 'planejador'">
+            <!-- SIDEBAR (Escondida durante o Planejador) -->
+            <div class="sidebar p-3 shadow-sm d-flex flex-column z-2 bg-dark" style="width: 280px;" v-show="abaAtiva !== 'planejador'">
                 <h6 class="mb-3 text-muted border-bottom border-dark-subtle pb-2 fw-bold"> Filtros Globais</h6>
                 
                 <div class="mb-3 dropdown">
@@ -152,10 +141,6 @@
                             <li v-if="cidadesFiltradasNaBusca.length === 0" class="text-muted small px-2 py-1 text-center">Nenhum município encontrado.</li>
                         </ul>
                     </div>
-
-                    <small class="text-muted" style="font-size: 10px;" v-if="ufsSelecionadas.length > 1 && !ufsSelecionadas.includes('Todos')">
-                        *Selecione apenas 1 estado para habilitar.
-                    </small>
                 </div>
 
                 <button v-if="abaAtiva !== 'radar' && abaAtiva !== 'historico'" class="btn btn-outline-warning btn-sm fw-bold w-100 mb-4" @click="baixarRelatorio">📥 Baixar Excel Geral</button>
@@ -170,8 +155,10 @@
                 </div>
             </div>
 
-            <div class="main-content flex-grow-1 d-flex flex-column bg-dark-main position-relative">
+            <!-- CONTEÚDO PRINCIPAL (Telas) -->
+            <div class="main-content flex-grow-1 d-flex flex-column bg-dark-main position-relative overflow-hidden">
                 
+                <!-- ABA 1: MAPA -->
                 <div :class="abaAtiva === 'mapa' ? 'd-flex' : 'd-none'" class="flex-column h-100 w-100">
                     <div class="m-3 mb-0">
                         <div class="card bg-dark-panel border-0 shadow-sm">
@@ -179,9 +166,7 @@
                                 <h6 class="mb-0 text-danger fw-bold" v-if="alertasFiltrados.length > 0">
                                     🚨 Identificamos {{ alertasFiltrados.length }} prefeituras publicando fora!
                                 </h6>
-                                <h6 class="mb-0 text-success fw-bold" v-else>
-                                    ✅ Sem alertas recentes de concorrência.
-                                </h6>
+                                <h6 class="mb-0 text-success fw-bold" v-else>✅ Sem alertas recentes de concorrência.</h6>
                                 <button v-if="alertasFiltrados.length > 0" class="btn btn-sm btn-outline-danger" @click="abrirModalAlertas">Ver todos</button>
                             </div>
                         </div>
@@ -189,58 +174,25 @@
                     <div id="map" class="flex-grow-1 m-3 rounded shadow-sm"></div>
                 </div>
 
-                <div v-if="abaAtiva === 'dashboards'" class="p-4 h-100 overflow-auto w-100 bg-dark-main">
+                <!-- ABA 2: DASHBOARDS -->
+                <div v-if="abaAtiva === 'dashboards'" class="p-4 h-100 overflow-auto w-100">
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <h4 class="fw-bold text-white mb-0"> Visão Estratégica</h4>
                         <span class="badge bg-secondary fs-6 text-white">{{ ufsSelecionadas.includes('Todos') ? 'Brasil' : ufsSelecionadas.join(', ') }}</span>
                     </div>
-                    
                     <div class="row g-3 mb-4">
-                        <div class="col-md-4">
-                            <div class="card bg-dark-panel border-0 p-3 shadow-sm text-center h-100">
-                                <h6 class="text-muted mb-1 small text-uppercase">Municípios Analisados</h6>
-                                <h3 class="text-white fw-bold mb-0">{{ dadosFiltrados.length }}</h3>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card bg-dark-panel border-0 p-3 shadow-sm text-center h-100">
-                                <h6 class="text-muted mb-1 small text-uppercase">Plataforma Líder</h6>
-                                <h3 class="text-warning fw-bold mb-0">{{ plataformaLider }}</h3>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card bg-dark-panel border-0 p-3 shadow-sm text-center h-100">
-                                <h6 class="text-muted mb-1 small text-uppercase">Prefeituras Exclusivas</h6>
-                                <h3 class="text-success fw-bold mb-0">{{ percentualExclusivo }}%</h3>
-                            </div>
-                        </div>
+                        <div class="col-md-4"><div class="card bg-dark-panel border-0 p-3 shadow-sm text-center h-100"><h6 class="text-muted mb-1 small text-uppercase">Municípios Analisados</h6><h3 class="text-white fw-bold mb-0">{{ dadosFiltrados.length }}</h3></div></div>
+                        <div class="col-md-4"><div class="card bg-dark-panel border-0 p-3 shadow-sm text-center h-100"><h6 class="text-muted mb-1 small text-uppercase">Plataforma Líder</h6><h3 class="text-warning fw-bold mb-0">{{ plataformaLider }}</h3></div></div>
+                        <div class="col-md-4"><div class="card bg-dark-panel border-0 p-3 shadow-sm text-center h-100"><h6 class="text-muted mb-1 small text-uppercase">Prefeituras Exclusivas</h6><h3 class="text-success fw-bold mb-0">{{ percentualExclusivo }}%</h3></div></div>
                     </div>
-
                     <div class="row g-4">
-                        <div class="col-md-6">
-                            <div class="card bg-dark-panel border-0 shadow-sm h-100">
-                                <div class="card-body">
-                                    <h6 class="card-title text-center text-muted fw-bold mb-4">Market Share (Top 10)</h6>
-                                    <div style="height: 280px; position: relative;">
-                                        <canvas id="chartPlataformas"></canvas>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="card bg-dark-panel border-0 shadow-sm h-100">
-                                <div class="card-body">
-                                    <h6 class="card-title text-center text-muted fw-bold mb-4">Status de Concorrência</h6>
-                                    <div style="height: 280px; position: relative;">
-                                        <canvas id="chartConcorrencia"></canvas>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <div class="col-md-6"><div class="card bg-dark-panel border-0 shadow-sm h-100"><div class="card-body"><h6 class="card-title text-center text-muted fw-bold mb-4">Market Share (Top 10)</h6><div style="height: 280px; position: relative;"><canvas id="chartPlataformas"></canvas></div></div></div></div>
+                        <div class="col-md-6"><div class="card bg-dark-panel border-0 shadow-sm h-100"><div class="card-body"><h6 class="card-title text-center text-muted fw-bold mb-4">Status de Concorrência</h6><div style="height: 280px; position: relative;"><canvas id="chartConcorrencia"></canvas></div></div></div></div>
                     </div>
                 </div>
 
-                <div v-if="abaAtiva === 'radar'" class="p-4 h-100 overflow-auto w-100 bg-dark-main d-flex flex-column">
+                <!-- ABA 3: RADAR -->
+                <div v-if="abaAtiva === 'radar'" class="p-4 h-100 overflow-auto w-100 d-flex flex-column">
                     <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-dark-subtle pb-2">
                         <div>
                             <h4 class="fw-bold text-warning mb-1">🎯 Radar de Prospecção</h4>
@@ -248,45 +200,20 @@
                         </div>
                         <span class="badge bg-danger fs-5">{{ dadosRadarFiltrados.length }} Alvos</span>
                     </div>
-                    
                     <div class="table-responsive shadow-sm border border-dark-subtle rounded flex-grow-1">
                         <table class="table table-dark table-hover table-striped mb-0 align-middle">
-                            <thead>
-                                <tr>
-                                    <th>Estado</th>
-                                    <th>Município</th>
-                                    <th>Órgão</th>
-                                    <th>Última Plataforma</th>
-                                    <th>Última Publicação</th>
-                                    <th class="text-center">Inatividade</th>
-                                    <th class="text-center">Ação</th>
-                                </tr>
-                            </thead>
+                            <thead><tr><th>Estado</th><th>Município</th><th>Órgão</th><th>Última Plataforma</th><th>Última Publicação</th><th class="text-center">Inatividade</th><th class="text-center">Ação</th></tr></thead>
                             <tbody>
                                 <tr v-for="item in radarPaginado" :key="item.Orgao + item.Municipio">
-                                    <td><span class="badge bg-secondary">{{ item.Estado }}</span></td>
-                                    <td class="fw-bold text-light">{{ item.Municipio }}</td>
-                                    <td class="small text-muted">{{ item.Orgao }}</td>
-                                    <td><span class="badge bg-dark border border-secondary text-light">{{ item.Plataforma }}</span></td>
-                                    <td class="text-light">{{ item.Ultima_Publicacao }}</td>
-                                    
-                                    <td class="text-center fw-bold text-danger">
-                                        {{ item.Meses_Inativo }} meses
-                                    </td>
-                                    
-                                    <td class="text-center">
-                                        <a :href="gerarLinkPNCP(item.Ultimo_ID_PNCP)" target="_blank" class="btn btn-sm btn-outline-info text-nowrap" v-if="item.Ultimo_ID_PNCP" title="Ver edital no portal do PNCP">
-                                            🔗 PNCP
-                                        </a>
-                                    </td>
+                                    <td><span class="badge bg-secondary">{{ item.Estado }}</span></td><td class="fw-bold text-light">{{ item.Municipio }}</td><td class="small text-muted">{{ item.Orgao }}</td>
+                                    <td><span class="badge bg-dark border border-secondary text-light">{{ item.Plataforma }}</span></td><td class="text-light">{{ item.Ultima_Publicacao }}</td>
+                                    <td class="text-center fw-bold text-danger">{{ item.Meses_Inativo }} meses</td>
+                                    <td class="text-center"><a :href="gerarLinkPNCP(item.Ultimo_ID_PNCP)" target="_blank" class="btn btn-sm btn-outline-info text-nowrap" v-if="item.Ultimo_ID_PNCP">🔗 PNCP</a></td>
                                 </tr>
-                                <tr v-if="dadosRadarFiltrados.length === 0">
-                                    <td colspan="7" class="text-center py-4 text-muted">Nenhum alvo encontrado para os filtros atuais.</td>
-                                </tr>
+                                <tr v-if="dadosRadarFiltrados.length === 0"><td colspan="7" class="text-center py-4 text-muted">Nenhum alvo encontrado.</td></tr>
                             </tbody>
                         </table>
                     </div>
-
                     <div class="d-flex justify-content-between align-items-center mt-3 p-2 bg-dark-panel rounded border border-dark-subtle" v-if="dadosRadarFiltrados.length > 0">
                         <span class="text-muted small">Mostrando página {{ paginaAtualRadar }} de {{ totalPaginasRadar }}</span>
                         <div class="btn-group">
@@ -297,43 +224,24 @@
                     </div>
                 </div>
 
-                <div v-if="abaAtiva === 'historico'" class="p-4 h-100 overflow-auto w-100 bg-dark-main">
+                <!-- ABA 4: HISTÓRICO -->
+                <div v-if="abaAtiva === 'historico'" class="p-4 h-100 overflow-auto w-100">
                     <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-dark-subtle pb-2">
                         <h4 class="fw-bold text-info mb-1">📜 Raio-X do Município</h4>
                     </div>
-
                     <div v-if="Object.keys(historicoFiltrado).length === 0" class="text-center mt-5 text-muted">
-                        <h3 style="font-size: 3rem;">🏢</h3>
-                        <h5>Selecione 1 Estado e 1 Município no menu lateral</h5>
-                        <p>Para ver as últimas 10 publicações de cada órgão desta cidade e a concorrência de plataformas.</p>
+                        <h3 style="font-size: 3rem;">🏢</h3><h5>Selecione 1 Estado e 1 Município no menu lateral</h5><p>Para ver as últimas 10 publicações de cada órgão desta cidade.</p>
                     </div>
-
                     <div v-else v-for="(licitacoes, orgao) in historicoFiltrado" :key="orgao" class="card bg-dark-panel border-secondary mb-4 shadow-sm">
-                        <div class="card-header bg-dark border-secondary text-light fw-bold fs-5">
-                            {{ orgao }}
-                        </div>
+                        <div class="card-header bg-dark border-secondary text-light fw-bold fs-5">{{ orgao }}</div>
                         <div class="card-body p-0">
                             <table class="table table-dark table-hover table-sm mb-0">
-                                <thead class="text-muted small">
-                                    <tr>
-                                        <th class="ps-3">Data da Publicação</th>
-                                        <th>Modalidade</th>
-                                        <th>Plataforma Utilizada</th>
-                                        <th class="text-end pe-3">Edital</th>
-                                    </tr>
-                                </thead>
+                                <thead class="text-muted small"><tr><th class="ps-3">Data</th><th>Modalidade</th><th>Plataforma</th><th class="text-end pe-3">Edital</th></tr></thead>
                                 <tbody>
                                     <tr v-for="lic in licitacoes" :key="lic.id_pncp">
-                                        <td class="ps-3 text-light">{{ lic.data_publicacao }}</td>
-                                        <td class="text-light fw-semibold" style="font-size: 11px;">{{ lic.modalidade || 'Não informada' }}</td>
-                                        <td>
-                                            <span class="badge" :style="{ backgroundColor: coresSistemas[lic.plataforma] || coresSistemas['Outros'] }">
-                                                {{ lic.plataforma }}
-                                            </span>
-                                        </td>
-                                        <td class="text-end pe-3">
-                                            <a :href="gerarLinkPNCP(lic.id_pncp)" target="_blank" class="btn btn-sm btn-outline-info py-0" style="font-size: 11px;">🔗 PNCP</a>
-                                        </td>
+                                        <td class="ps-3 text-light">{{ lic.data_publicacao }}</td><td class="text-light fw-semibold" style="font-size: 11px;">{{ lic.modalidade || 'Não informada' }}</td>
+                                        <td><span class="badge" :style="{ backgroundColor: coresSistemas[lic.plataforma] || coresSistemas['Outros'] }">{{ lic.plataforma }}</span></td>
+                                        <td class="text-end pe-3"><a :href="gerarLinkPNCP(lic.id_pncp)" target="_blank" class="btn btn-sm btn-outline-info py-0" style="font-size: 11px;">🔗 PNCP</a></td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -341,7 +249,8 @@
                     </div>
                 </div>
 
-                <div v-if="abaAtiva === 'copiloto'" class="p-4 h-100 overflow-auto w-100 bg-dark-main">
+                <!-- ABA 5: COPILOTO IA -->
+                <div v-if="abaAtiva === 'copiloto'" class="p-4 h-100 overflow-auto w-100">
                     <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-dark-subtle pb-3">
                         <div>
                             <h4 class="fw-bold mb-1" style="color: #a855f7;">🤖 Copiloto de Vendas IA</h4>
@@ -349,27 +258,17 @@
                         </div>
                         <span class="badge fs-5 text-white" style="background-color: #a855f7;">{{ dadosIA.length }} Oportunidades</span>
                     </div>
-
                     <div v-if="dadosIA.length === 0" class="text-center mt-5 text-muted">
-                        <h3>⏳ Processando Inteligência...</h3>
-                        <p>Certifique-se de que o script da IA rodou e gerou o arquivo rotas_ia.json.</p>
+                        <h3>⏳ Processando Inteligência...</h3><p>Certifique-se de que o script da IA rodou e gerou o arquivo rotas_ia.json.</p>
                     </div>
-
                     <div class="row g-4">
                         <div class="col-md-6 col-lg-4" v-for="(alvo, index) in dadosIA" :key="index">
                             <div class="card bg-dark-panel border-secondary h-100 shadow-lg" style="border-top: 4px solid #a855f7 !important;">
-                                
                                 <div class="card-header bg-dark border-secondary">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <h6 class="text-light fw-bold mb-0 lh-base">{{ alvo.Orgao_Alvo }}</h6>
-                                    </div>
-                                    <div class="mt-2 small">
-                                        <span class="text-warning fw-bold">📍 {{ alvo.Municipio }} - {{ alvo.Estado }}</span>
-                                    </div>
+                                    <div class="d-flex justify-content-between align-items-start"><h6 class="text-light fw-bold mb-0 lh-base">{{ alvo.Orgao_Alvo }}</h6></div>
+                                    <div class="mt-2 small"><span class="text-warning fw-bold">📍 {{ alvo.Municipio }} - {{ alvo.Estado }}</span></div>
                                 </div>
-                                
                                 <div class="card-body">
-                                    <!-- COMPARATIVO -->
                                     <div class="mb-3 p-2 rounded bg-dark border border-secondary small shadow-sm">
                                         <div class="text-muted mb-1 border-bottom border-secondary pb-1">Comparativo de Plataforma:</div>
                                         <div class="d-flex justify-content-between align-items-center mt-2">
@@ -377,32 +276,26 @@
                                             <span class="text-light">🏢 Este Órgão: <b class="text-danger">{{ alvo.Plataforma_Atual }}</b></span>
                                         </div>
                                     </div>
-                                    
                                     <h6 class="text-muted small fw-bold mb-3">🧠 Dossiê Estratégico (Gemini):</h6>
-                                    
-                                    <!-- TEXTO FORMATADO PELA IA -->
                                     <div class="text-light fw-light lh-base pb-2" style="font-size: 13px;" v-html="formatarTextoIA(alvo.Dossie_IA)"></div>
                                 </div>
-                                
                                 <div class="card-footer bg-dark border-secondary text-center">
-                                    <button class="btn btn-sm w-100 fw-bold text-white" style="background-color: #a855f7; border-color: #a855f7;">
-                                        ✅ Visita Agendada
-                                    </button>
+                                    <button class="btn btn-sm w-100 fw-bold text-white" style="background-color: #a855f7; border-color: #a855f7;">✅ Visita Agendada</button>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- 4. ABA DO PLANEJADOR ADICIONADA AQUI NO FINAL (Sem alterar as de cima) -->
-                <div v-if="abaAtiva === 'planejador'" class="p-4 h-100 overflow-auto w-100 bg-dark-main">
+                <!-- ABA 6: PLANEJADOR DE VIAGENS -->
+                <div v-if="abaAtiva === 'planejador'" class="p-4 h-100 overflow-auto w-100">
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <h4 class="fw-bold text-white mb-0">✈️ Planejador de Rotas e Custos</h4>
                         <button class="btn btn-outline-danger btn-sm" @click="limparPlanejamento">Reiniciar Rota</button>
                     </div>
 
                     <div class="row g-4">
-                        <!-- FORMULÁRIO DE CIDADE -->
+                        <!-- Formulário Esquerdo -->
                         <div class="col-md-5">
                             <div class="card bg-dark-panel border-secondary p-4 shadow-lg">
                                 <h6 class="text-info border-bottom border-secondary pb-2 mb-3">📍 Próxima Parada</h6>
@@ -413,14 +306,17 @@
                                     <option v-for="c in listaCidadesFull" :key="c" :value="c">{{ c }}</option>
                                 </select>
 
+                                <!-- Nova Exibição de Órgãos com Nomes Ocultos Extraídos do Histórico -->
                                 <div v-if="novaCidadeRota.orgaosDisponiveis.length > 0" class="mb-3">
                                     <label class="small text-muted d-block mb-2">Órgãos e Portais detectados:</label>
                                     <div class="bg-dark p-2 rounded border border-secondary" style="max-height: 180px; overflow-y: auto;">
-                                        <div v-for="o in novaCidadeRota.orgaosDisponiveis" :key="o.id_pncp" class="form-check mb-1">
-                                            <input class="form-check-input" type="checkbox" :value="o" v-model="novaCidadeRota.orgaosSelecionados" :id="'check_'+o.id_pncp">
-                                            <label class="form-check-label small text-light" :for="'check_'+o.id_pncp">
-                                                {{ o.nome_orgao }} <br>
-                                                <span class="badge" :style="{ backgroundColor: coresSistemas[o.sistema_fonte] || '#666', fontSize: '9px' }">{{ o.sistema_fonte }}</span>
+                                        <div v-for="(o, idx) in novaCidadeRota.orgaosDisponiveis" :key="idx" class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" :value="o" v-model="novaCidadeRota.orgaosSelecionados" :id="'check_'+idx">
+                                            <label class="form-check-label small text-light" :for="'check_'+idx" style="cursor: pointer; line-height: 1.2;">
+                                                <span class="fw-bold">{{ o.nome_orgao }}</span> <br>
+                                                <span class="badge mt-1" :style="{ backgroundColor: coresSistemas[o.sistema_fonte] || '#666', fontSize: '10px' }">
+                                                    {{ o.sistema_fonte }}
+                                                </span>
                                             </label>
                                         </div>
                                     </div>
@@ -437,7 +333,7 @@
                             </div>
                         </div>
 
-                        <!-- LISTA DA ROTA -->
+                        <!-- Lado Direito: A Rota Sendo Montada -->
                         <div class="col-md-7">
                             <div class="card bg-dark-panel border-secondary p-4 h-100 shadow-lg d-flex flex-column">
                                 <h6 class="text-success border-bottom border-secondary pb-2 mb-3">📋 Itinerário da Viagem</h6>
@@ -455,10 +351,10 @@
                                             <button class="btn btn-link btn-sm text-danger p-0" @click="removerPasso(i)">Remover</button>
                                         </div>
                                         <div class="small text-muted mb-2">
-                                            KM: <b>{{ p.km_total }}</b> | Custos: <b>R$ {{ (parseFloat(p.vr_hospedagem) + parseFloat(p.vr_jantar)).toFixed(2) }}</b>
+                                            KM Total: <b>{{ p.km_total }}</b> | Custos Estimados: <b>R$ {{ (parseFloat(p.vr_hospedagem) + parseFloat(p.vr_jantar)).toFixed(2) }}</b>
                                         </div>
                                         <div class="bg-dark p-2 rounded border border-secondary-subtle">
-                                            <div v-for="org in p.orgaosSelecionados" :key="org.id_pncp" class="small text-info">
+                                            <div v-for="(org, idxOrg) in p.orgaosSelecionados" :key="idxOrg" class="small text-info">
                                                 🎯 {{ org.nome_orgao }} ({{ org.sistema_fonte }})
                                             </div>
                                         </div>
