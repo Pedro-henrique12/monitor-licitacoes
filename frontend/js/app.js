@@ -127,10 +127,13 @@ createApp({
                 }
 
                 const [resAlertas, resDados, resGeo, resEstados, resHist, resIA] = await Promise.all([
-                    fetch('../data/output/alertas.json'), fetch('../data/output/dados_mercado.json'), 
+                    fetch('../data/output/alertas.json'), 
+                    fetch('../data/output/dados_mercado.json'), 
                     fetch('../data/geo/municipios_ibge.json/geojs-100-mun.json'),
-                    fetch('https://raw.githubusercontent.com/luizpedone/brazil-geojson/master/coords/states.json'), // Link corrigido pro Acre
-                    fetch('../data/output/historico.json'), fetch('../data/output/rotas_ia.json')
+                    // VOLTAMOS PARA O SEU LINK ORIGINAL:
+                    fetch('https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson'),
+                    fetch('../data/output/historico.json'), 
+                    fetch('../data/output/rotas_ia.json')
                 ]);
                 
                 if (resAlertas.ok) this.alertas = await resAlertas.json();
@@ -142,7 +145,9 @@ createApp({
                 
                 this.prepararFiltros();
                 this.filtrarDados(); 
-            } catch (erro) { console.error("Erro no carregamento:", erro); }
+            } catch (erro) { 
+                console.error("Erro no carregamento dos arquivos:", erro); 
+            }
         },
         prepararFiltros() { this.listaUFs = [...new Set(this.dadosMercado.map(item => item.uf))].sort(); },
         tratarSelecaoUFs(clicado) {
@@ -184,12 +189,13 @@ createApp({
         
         renderizarEstados() {
             if (!this.geoJsonEstados || !this.mapa) return;
+
+            // Se já existir, remove antes de adicionar de novo
             if (this.camadaEstados) this.mapa.removeLayer(this.camadaEstados);
+            
             this.camadaEstados = markRaw(L.geoJSON(this.geoJsonEstados, {
-                smoothFactor: 0, // Resolve o bug da linha reta no Acre
-                style: { color: '#ffffff', weight: 1.2, fillOpacity: 0, interactive: false }
+                style: { color: '#ffffff', weight: 1.5, fillOpacity: 0, interactive: false }
             })).addTo(this.mapa);
-            this.camadaEstados.bringToFront();
         },
 
         renderizarPoligonos() {
