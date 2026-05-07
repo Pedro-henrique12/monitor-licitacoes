@@ -209,16 +209,19 @@ createApp({
                     const rawId = feature.id || feature.properties.id || feature.properties.cod_ibge || feature.properties.GEOCODIGO;
                     const cod6 = String(rawId).substring(0,6);
                     const dadosCidade = mapDados[cod6];
+                    
                     let cor = CORES_SISTEMAS["Sem Dados no PNCP"];
                     if (dadosCidade && CORES_SISTEMAS[dadosCidade.sistema_fonte]) {
                         cor = CORES_SISTEMAS[dadosCidade.sistema_fonte];
                     }
+                    
                     return { fillColor: cor, weight: 0.5, color: '#111', opacity: 0.8, fillOpacity: 0.9 };
                 },
                 onEachFeature: (feature, layer) => {
                     const rawId = feature.id || feature.properties.id || feature.properties.cod_ibge || feature.properties.GEOCODIGO;
                     const cod6 = String(rawId).substring(0,6);
                     const dadosCidade = mapDados[cod6];
+                    
                     if (dadosCidade) {
                         layer.bindPopup(`<div style="color: #222;"><b>${dadosCidade.cidade_norm} - ${dadosCidade.uf}</b><br>Plataforma: <b>${dadosCidade.sistema_fonte}</b><br>Status: ${dadosCidade.status_municipio}</div>`);
                     } else {
@@ -228,13 +231,9 @@ createApp({
             })).addTo(this.mapa);
 
             if (!this.ufsSelecionadas.includes('Todos') && this.camadaGeoJson.getBounds().isValid()) {
-                this.mapa.fitBounds(this.camadaGeoJson.getBounds(), { padding: [20, 20] });
+                this.mapa.fitBounds(this.camadaGeoJson.getBounds());
             }
-
-            // Traz o contorno do estado para cima para ficar visível sobre a cor do município
-            if (this.camadaEstados) {
-                this.camadaEstados.bringToFront();
-            }
+            if (this.camadaEstados) this.camadaEstados.bringToFront();
         },
 
         atualizarDashboards() {
