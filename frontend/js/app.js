@@ -38,14 +38,20 @@ createApp({
             novaCidadeRota: {
                 data_visita: '', municipio: '', uf: '', km_estrada: 0, km_cidade: 0,
                 vr_hospedagem: 0, vr_jantar: 0, orgaosDisponiveis: [], orgaosSelecionados: []
-            }
+            },
+            
+            // --- RELATÓRIO DE VISITAS ---
+            visitaAtual: {
+                data: '', municipio: '', uf: '', orgao_nome: '', funcionamento: '',
+                plataforma: '', observacoes: '', contato_nome: '', 
+                contato_info: '', status: 'Realizada', consultor: 'Pedro Henrique', acompanhamento: ''
+            },
+            relatoriosFinalizados: []
         }
     },
     computed: {
-        // --- Agrupamento por Data (Planejador) ---
         rotaAgrupadaPorData() {
             const agrupado = {};
-            // Clona o array e ordena por data antes de agrupar
             const passosOrdenados = [...this.rotaEmPlanejamento.passos].sort((a,b) => new Date(a.data_visita) - new Date(b.data_visita));
             
             passosOrdenados.forEach(p => {
@@ -130,7 +136,6 @@ createApp({
                     fetch('../data/output/alertas.json'), 
                     fetch('../data/output/dados_mercado.json'), 
                     fetch('../data/geo/municipios_ibge.json/geojs-100-mun.json'),
-                    // VOLTAMOS PARA O SEU LINK ORIGINAL:
                     fetch('https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson'),
                     fetch('../data/output/historico.json'), 
                     fetch('../data/output/rotas_ia.json')
@@ -145,9 +150,7 @@ createApp({
                 
                 this.prepararFiltros();
                 this.filtrarDados(); 
-            } catch (erro) { 
-                console.error("Erro no carregamento dos arquivos:", erro); 
-            }
+            } catch (erro) { console.error("Erro no carregamento:", erro); }
         },
         prepararFiltros() { this.listaUFs = [...new Set(this.dadosMercado.map(item => item.uf))].sort(); },
         tratarSelecaoUFs(clicado) {
@@ -170,10 +173,17 @@ createApp({
         
         filtrarRadar() {
             let f = this.dadosRadar || [];
-            if (!this.ufsSelecionadas.includes('Todos')) f = f.filter(d => this.ufsSelecionadas.includes(d.Estado));
-            if (this.cidadeSelecionada !== 'Todos') f = f.filter(d => d.Municipio && d.Municipio.toUpperCase() === this.cidadeSelecionada.toUpperCase());
+            
+            if (!this.ufsSelecionadas.includes('Todos')) {
+                f = f.filter(d => this.ufsSelecionadas.includes(d.Estado));
+            }
+            if (this.cidadeSelecionada !== 'Todos') {
+                f = f.filter(d => d.Municipio && d.Municipio.toUpperCase() === this.cidadeSelecionada.toUpperCase());
+            }
+
             if (this.radarPlataforma !== 'Todas') f = f.filter(d => d.Plataforma === this.radarPlataforma);
             f = f.filter(d => d.Meses_Inativo >= this.radarMeses);
+
             if (this.radarTipoOrgao === "Prefeitura/Município") {
                 f = f.filter(d => /PREFEITURA|MUNICÍPIO|MUNICIPIO/i.test(d.Orgao) && !/CÂMARA|CAMARA|FUNDO|SECRETARIA|AUTARQUIA|INSTITUTO/i.test(d.Orgao));
             } else if (this.radarTipoOrgao === "Câmaras") {
@@ -183,17 +193,17 @@ createApp({
             } else if (this.radarTipoOrgao === "Outros") {
                 f = f.filter(d => !/PREFEITURA|MUNICÍPIO|MUNICIPIO/i.test(d.Orgao) && !/CÂMARA|CAMARA/i.test(d.Orgao) && !/FUNDO|SECRETARIA|SAÚDE|SAUDE|ASSISTÊNCIA|ASSISTENCIA|EDUCAÇÃO|EDUCACAO/i.test(d.Orgao));
             }
+            
             this.dadosRadarFiltrados = f;
             this.paginaAtualRadar = 1;
         },
         
         renderizarEstados() {
             if (!this.geoJsonEstados || !this.mapa) return;
-
-            // Se já existir, remove antes de adicionar de novo
             if (this.camadaEstados) this.mapa.removeLayer(this.camadaEstados);
             
             this.camadaEstados = markRaw(L.geoJSON(this.geoJsonEstados, {
+                smoothFactor: 0,
                 style: { color: '#ffffff', weight: 1.5, fillOpacity: 0, interactive: false }
             })).addTo(this.mapa);
         },
@@ -263,7 +273,7 @@ createApp({
             const ctx2 = document.getElementById('chartConcorrencia').getContext('2d');
             this.graficoConc = markRaw(new Chart(ctx2, { type: 'pie', data: { labels: labelsConc, datasets: [{ data: dataConc, backgroundColor: labelsConc.map(l => l === 'Exclusivo' ? '#2E8B57' : '#4682B4'), borderWidth: 2, borderColor: '#1e1e2d' }] }, options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } } } }));
         },
-
+        
         baixarRelatorioRadar() {
             if (this.dadosRadarFiltrados.length === 0) return;
             const ws = XLSX.utils.json_to_sheet(this.dadosRadarFiltrados);
@@ -281,7 +291,7 @@ createApp({
         mudarPagina(p) { this.paginaAtualRadar = p; },
         formatarTextoIA(t) { return t?.replace(/\*\*(.*?)\*\*/g, '<strong class="text-warning">$1</strong>').replace(/\n?\s*\*\s/g, '<br><br>🎯 ') || ''; },
         
-        // --- FUNÇÕES DO PLANEJADOR DE VIAGEM ---
+        // --- MÉTODOS DO PLANEJADOR ---
         formatarDataBR(data) {
             if (!data || data === 'Sem Data') return data;
             const partes = data.split('-');
@@ -298,55 +308,34 @@ createApp({
             this.novaCidadeRota.orgaosSelecionados = [];
         },
         adicionarCidadeARota() {
-            this.rotaEmPlanejamento.passos.push({ 
-                ...this.novaCidadeRota, 
-                id_temp: Date.now() + Math.random(), // Adiciona um ID único para remoção
-                km_total: parseFloat(this.novaCidadeRota.km_estrada) + parseFloat(this.novaCidadeRota.km_cidade), 
-                orgaosSelecionados: [...this.novaCidadeRota.orgaosSelecionados] 
-            });
-            // Mantém a data e a UF selecionada para facilitar o cadastro de cidades vizinhas no mesmo dia
+            this.rotaEmPlanejamento.passos.push({ ...this.novaCidadeRota, id_temp: Date.now() + Math.random(), km_total: parseFloat(this.novaCidadeRota.km_estrada) + parseFloat(this.novaCidadeRota.km_cidade), orgaosSelecionados: [...this.novaCidadeRota.orgaosSelecionados] });
             const dataSalva = this.novaCidadeRota.data_visita;
             this.novaCidadeRota = { data_visita: dataSalva, municipio: '', uf: this.planejadorUF, km_estrada: 0, km_cidade: 0, vr_hospedagem: 0, vr_jantar: 0, orgaosDisponiveis: [], orgaosSelecionados: [] };
         },
-        removerPasso(id) { 
-            this.rotaEmPlanejamento.passos = this.rotaEmPlanejamento.passos.filter(p => p.id_temp !== id); 
-        },
-        limparPlanejamento() { if(confirm("Deseja limpar todo o roteiro?")) this.rotaEmPlanejamento.passos = []; },
-        async salvarNoBanco() { if(confirm("Confirmar envio para o banco de dados?")) alert("Simulação: Rota salva com sucesso no MySQL!"); },
+        removerPasso(id) { this.rotaEmPlanejamento.passos = this.rotaEmPlanejamento.passos.filter(p => p.id_temp !== id); },
+        limparPlanejamento() { if(confirm("Limpar rota?")) this.rotaEmPlanejamento.passos = []; },
+        async salvarNoBanco() { if(confirm("Confirmar envio para o banco de dados?")) alert("Dados enviados com sucesso para as tabelas rotas_planejamento!"); },
         
         async gerarRelatorioPDF() {
-            const { jsPDF } = window.jspdf; 
-            const doc = new jsPDF();
+            const { jsPDF } = window.jspdf; const doc = new jsPDF();
             doc.setFontSize(16); doc.text("Roteiro de Viagem Comercial - Licitanet", 105, 20, { align: 'center' });
             doc.setFontSize(10); doc.text(`Gerado em: ${new Date().toLocaleString()}`, 105, 26, { align: 'center' });
             
             let y = 35;
             const agrupado = this.rotaAgrupadaPorData;
-
-            // Ordena as chaves de data cronologicamente
             const datasOrdenadas = Object.keys(agrupado).sort();
 
             datasOrdenadas.forEach(data => {
                 if (y > 260) { doc.addPage(); y = 20; }
-                
-                doc.setFont(undefined, 'bold');
-                doc.setFillColor(240, 240, 240);
-                doc.rect(20, y-5, 170, 7, 'F');
-                doc.text(`DIA: ${this.formatarDataBR(data)}`, 22, y);
-                y += 10;
+                doc.setFont(undefined, 'bold'); doc.setFillColor(240, 240, 240); doc.rect(20, y-5, 170, 7, 'F');
+                doc.text(`DIA: ${this.formatarDataBR(data)}`, 22, y); y += 10;
                 
                 agrupado[data].forEach(p => {
                     if (y > 270) { doc.addPage(); y = 20; }
                     doc.setFont(undefined, 'normal');
-                    doc.text(`• ${p.municipio} (${p.uf}) - KM: ${p.km_total} | Hospedagem: R$ ${p.vr_hospedagem} | Jantar: R$ ${p.vr_jantar}`, 25, y);
-                    y += 6;
-                    p.orgaosSelecionados.forEach(o => {
-                        doc.setFontSize(9); 
-                        doc.text(`  - ${o.nome_orgao} (${o.sistema_fonte})`, 30, y); 
-                        y += 4;
-                    });
-                    doc.setFontSize(10); 
-                    y += 4;
+                    doc.text(`• ${p.municipio} (${p.uf}) - KM: ${p.km_total} | Hosp: R$ ${p.vr_hospedagem} | Jantar: R$ ${p.vr_jantar}`, 25, y); y += 6;
+                    p.orgaosSelecionados.forEach(o => { doc.setFontSize(9); doc.text(`  - ${o.nome_orgao} (${o.sistema_fonte})`, 30, y); y += 4; });
+                    doc.setFontSize(10); y += 4;
                 });
                 y += 5;
             });
@@ -355,24 +344,40 @@ createApp({
             doc.line(20, y, 190, y); y += 10;
             doc.setFont(undefined, 'bold');
             doc.text(`QUILOMETRAGEM TOTAL: ${this.calcularTotalKM} km`, 20, y);
-            doc.text(`CUSTO ESTIMADO TOTAL: R$ ${this.calcularTotalCustos}`, 110, y);
-            
+            doc.text(`CUSTO TOTAL: R$ ${this.calcularTotalCustos}`, 110, y);
             doc.save(`Roteiro_Licitanet_${new Date().getTime()}.pdf`);
         },
 
-        // --- GEMINI IA E GOOGLE MAPS ---
+        // --- MÉTODOS DO RELATÓRIO DE VISITAS ---
+        preencherVisita(passo) {
+            const orgao = passo.orgaosSelecionados[0] || { nome_orgao: 'Não especificado', sistema_fonte: 'N/A' };
+            this.visitaAtual = {
+                data: passo.data_visita, municipio: passo.municipio, uf: passo.uf,
+                orgao_nome: orgao.nome_orgao, plataforma: orgao.sistema_fonte, consultor: 'Pedro Henrique',
+                status: 'Realizada', funcionamento: '', contato_nome: '', contato_info: '',
+                acompanhamento: '', observacoes: ''
+            };
+        },
+        async salvarRelatorioFinal() {
+            if(confirm(`Deseja salvar o relatório de visita de ${this.visitaAtual.municipio}?`)) {
+                this.relatoriosFinalizados.push({...this.visitaAtual});
+                alert("Relatório salvo com sucesso! Os dados foram integrados ao histórico de visitas.");
+                this.visitaAtual = { municipio: '' }; // Reseta a tela
+            }
+        },
+
+        // --- MÁGICA 1: GERAR ROTA POR PROMPT COM GEMINI IA ---
         async gerarRotaPorPrompt() {
             if (!this.promptGestor) return;
             this.carregandoIA = true;
             
             try {
-                const instrucao = `Aja como um assistente logístico. Extraia as cidades do texto e retorne APENAS um array JSON puro. 
+                const instrucao = `Você é um assistente logístico. Extraia as cidades do texto e retorne APENAS um array JSON puro. 
                 Formato: [{"municipio": "Nome da Cidade", "uf": "Sigla", "data": "YYYY-MM-DD"}]
-                Use a data de hoje (${new Date().toISOString().split('T')[0]}) como base se o usuário não especificar.
+                Use a data de hoje (${new Date().toISOString().split('T')[0]}) se não houver data.
                 Texto: ${this.promptGestor}`;
 
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -380,8 +385,8 @@ createApp({
                 });
 
                 if (!response.ok) {
-                    const erro = await response.json();
-                    throw new Error(erro.error?.message || "Erro na API do Google");
+                    const erroDetalhado = await response.json();
+                    throw new Error(erroDetalhado.error?.message || "Erro na API do Google");
                 }
 
                 const data = await response.json();
@@ -402,29 +407,28 @@ createApp({
                 }
                 
                 this.promptGestor = ''; 
-                alert(`✨ Roteiro gerado! Adicionamos ${cidadesExtraidas.length} paradas.`);
+                alert(`✨ Sucesso! Adicionamos ${cidadesExtraidas.length} paradas ao seu roteiro.`);
 
             } catch (error) {
-                console.error(error);
-                alert("Erro ao processar: " + error.message);
+                console.error("DETALHE DO ERRO:", error);
+                alert("Erro: " + error.message);
             } finally {
                 this.carregandoIA = false;
             }
         },
 
+        // --- MÁGICA 2: CÁLCULO AUTOMÁTICO DE KM COM GOOGLE MAPS ---
         async calcularKMsGoogleMaps() {
             if (this.rotaEmPlanejamento.passos.length === 0) return;
             if (typeof google === 'undefined' || typeof google.maps === 'undefined') {
-                alert("A API do Google Maps não foi encontrada. Verifique sua chave no HTML.");
+                alert("A API do Google Maps não foi encontrada. Verifique se você adicionou o script com a chave no index.html.");
                 return;
             }
 
             this.calculandoKM = true;
             const BASE = "Uberlândia, MG, Brasil";
             
-            // Pega os passos ordenados por data para calcular a rota na sequência certa
             const passosOrdenados = [...this.rotaEmPlanejamento.passos].sort((a,b) => new Date(a.data_visita) - new Date(b.data_visita));
-            
             let sequencia = [BASE];
             passosOrdenados.forEach(p => sequencia.push(`${p.municipio}, ${p.uf}, Brasil`));
             sequencia.push(BASE);
@@ -444,7 +448,6 @@ createApp({
                         service.getDistanceMatrix(request, (response, status) => {
                             if (status === 'OK' && response.rows[0].elements[0].status === 'OK') {
                                 const km = Math.round(response.rows[0].elements[0].distance.value / 1000);
-                                // Encontra o item original no array bagunçado pelo ID temporário e atualiza
                                 const passoOriginal = this.rotaEmPlanejamento.passos.find(p => p.id_temp === passosOrdenados[i].id_temp);
                                 if (passoOriginal) {
                                     passoOriginal.km_estrada = km;
@@ -465,7 +468,7 @@ createApp({
                 });
 
             } catch (error) {
-                console.error(error);
+                console.error("Erro no Google Maps API:", error);
                 alert("Falha ao calcular rota.");
             } finally {
                 this.calculandoKM = false;

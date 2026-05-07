@@ -59,6 +59,7 @@
                         <li class="nav-item"><a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'historico', 'text-secondary': abaAtiva !== 'historico' }" @click="mudarAba('historico')" href="#" style="cursor: pointer;">📜 Histórico</a></li>
                         <li class="nav-item"><a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-white': abaAtiva === 'copiloto', 'text-secondary': abaAtiva !== 'copiloto' }" @click="mudarAba('copiloto')" href="#" style="cursor: pointer;">🤖 Copiloto IA</a></li>
                         <li class="nav-item"><a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-info': abaAtiva === 'planejador', 'text-secondary': abaAtiva !== 'planejador' }" @click="mudarAba('planejador')" href="#" style="cursor: pointer;">✈️ Planejador</a></li>
+                        <li class="nav-item"><a class="nav-link fs-6 px-3" :class="{ 'active fw-bold text-success': abaAtiva === 'visitas', 'text-secondary': abaAtiva !== 'visitas' }" @click="mudarAba('visitas')" href="#" style="cursor: pointer;">📝 Visitas</a></li>
                     </ul>
                 </div>
             </div>
@@ -66,7 +67,7 @@
 
         <div class="d-flex flex-grow-1 overflow-hidden z-1">
             
-            <div class="sidebar p-3 shadow-sm d-flex flex-column z-2 bg-dark" style="width: 280px;" v-show="abaAtiva !== 'planejador'">
+            <div class="sidebar p-3 shadow-sm d-flex flex-column z-2 bg-dark" style="width: 280px;" v-show="abaAtiva !== 'planejador' && abaAtiva !== 'visitas'">
                 <h6 class="mb-3 text-muted border-bottom border-dark-subtle pb-2 fw-bold"> Filtros Globais</h6>
                 
                 <div class="mb-3 dropdown">
@@ -316,9 +317,6 @@
                                     <h6 class="text-muted small fw-bold mb-3">🧠 Dossiê Estratégico (Gemini):</h6>
                                     <div class="text-light fw-light lh-base pb-2" style="font-size: 13px;" v-html="formatarTextoIA(alvo.Dossie_IA)"></div>
                                 </div>
-                                <div class="card-footer bg-dark border-secondary text-center">
-                                    <button class="btn btn-sm w-100 fw-bold text-white" style="background-color: #a855f7; border-color: #a855f7;">✅ Visita Agendada</button>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -450,6 +448,88 @@
                                         <span class="text-success">Custo Est. Total: R$ {{ calcularTotalCustos }}</span>
                                     </div>
                                     <button v-if="rotaEmPlanejamento.passos.length > 0" class="btn btn-primary w-100 fw-bold" @click="gerarRelatorioPDF">📄 Exportar Roteiro Completo (PDF)</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="abaAtiva === 'visitas'" class="p-4 h-100 overflow-auto w-100 bg-dark-main">
+                    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3">
+                        <h4 class="fw-bold text-white mb-0">📝 Registro de Visita em Campo</h4>
+                        <button class="btn btn-success fw-bold" @click="salvarRelatorioFinal" :disabled="!visitaAtual.municipio">💾 Finalizar Registro</button>
+                    </div>
+
+                    <div class="row g-4">
+                        <div class="col-md-4">
+                            <div class="card bg-dark-panel border-secondary p-3 shadow-sm h-100">
+                                <h6 class="text-info mb-3">1. Selecione a Parada da Rota</h6>
+                                <div class="list-group list-group-flush overflow-auto" style="max-height: 500px;">
+                                    <button v-for="p in rotaEmPlanejamento.passos" :key="p.id_temp" 
+                                            @click="preencherVisita(p)"
+                                            class="list-group-item list-group-item-action bg-dark text-white border-secondary mb-2 rounded shadow-sm text-start">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <small class="text-info fw-bold">{{ formatarDataBR(p.data_visita) }}</small>
+                                            <span class="badge bg-secondary">{{ p.uf }}</span>
+                                        </div>
+                                        <div class="fw-bold fs-6">{{ p.municipio }}</div>
+                                        <div class="small text-muted text-truncate mt-1">{{ p.orgaosSelecionados.map(o => o.nome_orgao).join(', ') || 'Nenhum órgão' }}</div>
+                                    </button>
+                                    <div v-if="rotaEmPlanejamento.passos.length === 0" class="text-center text-muted p-3 mt-4 border border-secondary rounded border-dashed">
+                                        Nenhuma rota planejada.<br>Vá na aba <b>Planejador</b> para criar uma rota primeiro.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-8">
+                            <div class="card bg-dark-panel border-secondary p-4 shadow-lg h-100">
+                                <h6 class="text-success border-bottom border-secondary pb-2 mb-3">2. Informações da Visita</h6>
+                                
+                                <div v-if="!visitaAtual.municipio" class="text-center py-5 text-muted my-auto">
+                                    <p>Escolha uma parada da rota ao lado para iniciar o preenchimento.</p>
+                                </div>
+
+                                <div v-else class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="small text-muted">Município / Órgão</label>
+                                        <div class="p-2 bg-dark rounded border border-secondary text-info fw-bold" style="font-size: 13px;">
+                                            {{ visitaAtual.municipio }} - {{ visitaAtual.orgao_nome }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="small text-muted">Consultor</label>
+                                        <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" v-model="visitaAtual.consultor">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="small text-muted">Status da Visita</label>
+                                        <select class="form-select form-select-sm bg-dark text-white border-secondary fw-bold" :class="{'text-success': visitaAtual.status === 'Realizada', 'text-warning': visitaAtual.status === 'Remarcada', 'text-danger': visitaAtual.status === 'Órgão Fechado'}" v-model="visitaAtual.status">
+                                            <option value="Realizada">✅ Realizada</option>
+                                            <option value="Remarcada">⏳ Remarcada</option>
+                                            <option value="Órgão Fechado">🚫 Órgão Fechado</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="small text-muted">Funcionamento do Órgão</label>
+                                        <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Ex: 08h às 14h" v-model="visitaAtual.funcionamento">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="small text-muted">Contato (Nome do Responsável)</label>
+                                        <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" v-model="visitaAtual.contato_nome">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="small text-muted">Telefone / E-mail</label>
+                                        <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" v-model="visitaAtual.contato_info">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="small text-muted">Acompanhamento (Próximo Passo)</label>
+                                        <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Ex: Ligar na próxima terça" v-model="visitaAtual.acompanhamento">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="small text-muted">Informações Relevantes / Observações</label>
+                                        <textarea class="form-control bg-dark text-white border-secondary" rows="4" v-model="visitaAtual.observacoes"></textarea>
+                                    </div>
                                 </div>
                             </div>
                         </div>
