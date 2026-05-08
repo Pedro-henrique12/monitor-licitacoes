@@ -38,17 +38,15 @@ createApp({
             novaCidadeRota: {
                 data_visita: '', municipio: '', uf: '', km_estrada: 0, km_cidade: 0,
                 vr_hospedagem: 0, vr_jantar: 0, orgaosDisponiveis: [], orgaosSelecionados: []
-            }
+            },
             
-            /* --- RELATÓRIO DE VISITAS (COMENTADO TEMPORARIAMENTE) ---
-            ,
+            // --- RELATÓRIO DE VISITAS ---
             visitaAtual: {
                 data: '', municipio: '', uf: '', orgao_nome: '', funcionamento: '',
                 plataforma: '', observacoes: '', contato_nome: '', 
                 contato_info: '', status: 'Realizada', consultor: 'Pedro Henrique', acompanhamento: ''
             },
             relatoriosFinalizados: []
-            */
         }
     },
     computed: {
@@ -175,8 +173,13 @@ createApp({
         
         filtrarRadar() {
             let f = this.dadosRadar || [];
-            if (!this.ufsSelecionadas.includes('Todos')) f = f.filter(d => this.ufsSelecionadas.includes(d.Estado));
-            if (this.cidadeSelecionada !== 'Todos') f = f.filter(d => d.Municipio && d.Municipio.toUpperCase() === this.cidadeSelecionada.toUpperCase());
+            
+            if (!this.ufsSelecionadas.includes('Todos')) {
+                f = f.filter(d => this.ufsSelecionadas.includes(d.Estado));
+            }
+            if (this.cidadeSelecionada !== 'Todos') {
+                f = f.filter(d => d.Municipio && d.Municipio.toUpperCase() === this.cidadeSelecionada.toUpperCase());
+            }
 
             if (this.radarPlataforma !== 'Todas') f = f.filter(d => d.Plataforma === this.radarPlataforma);
             f = f.filter(d => d.Meses_Inativo >= this.radarMeses);
@@ -200,6 +203,7 @@ createApp({
             if (this.camadaEstados) this.mapa.removeLayer(this.camadaEstados);
             
             this.camadaEstados = markRaw(L.geoJSON(this.geoJsonEstados, {
+                smoothFactor: 0,
                 style: { color: '#ffffff', weight: 1.5, fillOpacity: 0, interactive: false }
             })).addTo(this.mapa);
         },
@@ -344,7 +348,7 @@ createApp({
             doc.save(`Roteiro_Licitanet_${new Date().getTime()}.pdf`);
         },
 
-        /* --- MÉTODOS DO RELATÓRIO DE VISITAS (COMENTADOS) ---
+        // --- MÉTODOS DO RELATÓRIO DE VISITAS ---
         preencherVisita(passo) {
             const orgao = passo.orgaosSelecionados[0] || { nome_orgao: 'Não especificado', sistema_fonte: 'N/A' };
             this.visitaAtual = {
@@ -358,10 +362,9 @@ createApp({
             if(confirm(`Deseja salvar o relatório de visita de ${this.visitaAtual.municipio}?`)) {
                 this.relatoriosFinalizados.push({...this.visitaAtual});
                 alert("Relatório salvo com sucesso! Os dados foram integrados ao histórico de visitas.");
-                this.visitaAtual = { municipio: '' }; 
+                this.visitaAtual = { municipio: '' }; // Reseta a tela
             }
         },
-        */
 
         // --- MÁGICA 1: GERAR ROTA POR PROMPT COM GEMINI IA ---
         async gerarRotaPorPrompt() {
